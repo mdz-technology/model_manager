@@ -1,167 +1,130 @@
-use std::any::Any;
 use std::collections::HashMap;
-use serde_json::{Map, Value};
-use crate::dynamic::application::dynamic_value::DynamicValue;
+use std::sync::Arc;
+use serde_json::{Map, Number, Value};
+use crate::dynamic::application::dynamic_value::{DynamicValue, DynamicError, DynamicResult};
 
 #[derive(Debug, Clone)]
-pub struct DynamicValueImpl {
-    value: Value
+pub struct  DynamicValueImpl {
+    inner: Arc<Value>
+}
+
+impl DynamicValueImpl {
+    fn new(inner: Value) -> Self {
+        Self { inner: Arc::new(inner) }
+    }
+
 }
 
 impl DynamicValue for DynamicValueImpl {
 
-
-    /// Crea un nuevo JsonWrapper desde un mapa clave-valor de Rust
-    fn from_map(map: HashMap<&str, Box<dyn DynamicValue>>) -> Box<dyn DynamicValue> {
-        /*Box::new(
-            DynamicValueImpl {
-                value: serde_json::Value::Object(map.into_iter()
-                    .map(|(k, v)| (k.to_string(), v.to_json()))
-                    .collect())
-            })
-
-*/
-
-        let json_map: Map<String, Value> = map.into_iter()
-            .map(|(k, v)| {
-                // Downcast to get the concrete inner value.
-                if let Some(inner) = v.as_any().downcast_ref::<DynamicValueImpl>() {
-                    (k.to_string(), inner.value.clone())
-                } else {
-                    panic!("Expected DynamicValueImpl")
-                }
-            })
-            .collect();
-        Box::new( DynamicValueImpl{ value: Value::Object(json_map) })
+    fn new_object() -> Self {
+        Self::new(Value::Object(Map::new()))
     }
 
-    /// Crea un nuevo JsonWrapper desde un vector de JsonWrapper
-    fn from_array(array: Vec<Box<dyn DynamicValue>>) -> Box<dyn DynamicValue> {
-        /*Box::new(DynamicValueImpl { value: serde_json::Value::Array(array.into_iter().map(|v| v.to_json()).collect()) })*/
-        let json_array: Vec<Value> = array.into_iter().map(|v| {
-            if let Some(inner) = v.as_any().downcast_ref::<DynamicValueImpl>() {
-                inner.value.clone()
-            } else {
-                panic!("Expected DynamicValueImpl")
-            }
-        }).collect();
-        Box::new(DynamicValueImpl { value: Value::Array(json_array) })
-        //Box::new(DynamicValueImpl { })
+    fn new_array() -> Self {
+        Self::new(Value::Array(Vec::new()))
     }
 
-    /// Crea un JsonWrapper desde un string
-    fn from_str(s: &str) -> Box<dyn DynamicValue> {
-        Box::new(DynamicValueImpl { value: serde_json::Value::String(s.to_string()) })
+    fn from_str(str_value: &str) -> Self {
+        Self::new(Value::String(str_value.to_string()))
     }
 
-    /// Crea un JsonWrapper desde un número
-    fn from_number(n: f64) -> Box<dyn DynamicValue> {
-        // Usar Number::from_f64 que devuelve un Option
-        let num = serde_json::Number::from_f64(n)
-            .expect("Número no válido (NaN o infinito)"); // O manejar el error adecuadamente
-
-        Box::new(DynamicValueImpl { value: serde_json::Value::Number(num) })
+    fn from_number(n: f64) -> DynamicResult<Self> {
+        if let Some(num) = Number::from_f64(n) {
+            Ok(Self::new(Value::Number(num)))
+        } else {
+            Err(DynamicError::InvalidNumber("Número inválido (NaN o infinito)".to_string()))
+        }
     }
 
-    /// Crea un JsonWrapper desde un booleano
-    fn from_bool(b: bool) -> Box<dyn DynamicValue> {
-        Box::new(DynamicValueImpl {value: Value::Bool(b)  })
+    fn from_bool(bool_value: bool) -> Self {
+        Self::new(Value::Bool(bool_value))
     }
 
-    /// Verifica si es un objeto
     fn is_object(&self) -> bool {
-        self.value.is_object()
+        self.inner.is_object()
     }
 
-    /// Verifica si es un array
     fn is_array(&self) -> bool {
-        self.value.is_array()
+        self.inner.is_array()
     }
 
-    /// Obtiene un string si es posible
-    fn as_str(&self) -> Option<String> {
-        self.value.as_str().map(|s| s.to_string())
+    fn as_str(&self) -> Option<&str> {
+        self.inner.as_str()
     }
 
-    /// Obtiene un número si es posible
     fn as_number(&self) -> Option<f64> {
-        self.value.as_f64()
+        self.inner.as_f64()
     }
 
-    /// Obtiene un booleano si es posible
     fn as_bool(&self) -> Option<bool> {
-        self.value.as_bool()
+        self.inner.as_bool()
     }
 
-    /// Obtiene un HashMap si es un objeto JSON
-    fn as_map(&self) -> Option<HashMap<String, Box<dyn DynamicValue>>> {
-        self.value.as_object().map(|map| {
-            map.iter().map(|(k, v)| {
-                (k.clone(), Box::new(DynamicValueImpl { value: v.clone() }) as Box<dyn DynamicValue>)
-            }).collect()
+    fn as_map(&self) -> Option<HashMap<String, Self>> {
+        self.inner.as_object().map(|map| {
+            map.iter()
+                .map(|(k, v)| (k.clone(), Self::new(v.clone())))
+                .collect()
         })
     }
 
-    /// Obtiene un vector si es un array JSON
-    fn as_array(&self) -> Option<Vec<Box<dyn DynamicValue>>> {
-        self.value.as_array().map(|arr| {
-            arr.iter().map(|v| Box::new(DynamicValueImpl { value: v.clone() }) as Box<dyn DynamicValue>).collect()
+    fn as_array(&self) -> Option<Vec<Self>> {
+        self.inner.as_array().map(|arr| {
+            arr.iter().map(|v| Self::new(v.clone())).collect()
         })
     }
 
-    /// Obtiene un campo dentro del objeto JSON
-    fn get(&self, key: &str) -> Option<Box<dyn DynamicValue>> {
-        self.value.get(key).map(|v| Box::new(DynamicValueImpl { value: v.clone() }) as Box<dyn DynamicValue>)
+    fn get(&self, key: &str) -> Option<Self> {
+        self.inner.get(key).map(|v| Self::new(v.clone()))
     }
 
-    /// Establece un valor dentro del objeto JSON
-    fn set(&mut self, key: &str, value: Box<dyn DynamicValue>) {
-        if let Value::Object(ref mut map) = self.value {
-            if let Some(inner) = value.as_any().downcast_ref::<DynamicValueImpl>() {
-                map.insert(key.to_string(), inner.value.clone());
-            } else {
-                panic!("Expected DynamicValueImpl")
-            }
+    fn get_all(&self) -> Vec<Self> {
+        if let Value::Object(ref map) = *self.inner {
+            map.values().map(|v| Self::new(v.clone())).collect()
+        } else {
+            vec![]
         }
     }
 
-    fn remove(&mut self, key: &str) {
-        if let Value::Object(ref mut map) = self.value {
+    fn set(&mut self, key: &str, value: Self) -> DynamicResult<()> {
+        if let Value::Object(ref mut map) = Arc::make_mut(&mut self.inner) {
+            map.insert(key.to_string(), (*value.inner).clone());
+            Ok(())
+        } else {
+            Err(DynamicError::TypeMismatch("No se puede establecer una clave en un valor que no es objeto".to_string()))
+        }
+    }
+
+    fn remove(&mut self, key: &str) -> DynamicResult<()> {
+        if let Value::Object(ref mut map) = Arc::make_mut(&mut self.inner) {
             map.remove(key);
+            Ok(())
+        } else {
+            Err(DynamicError::TypeMismatch("No se puede eliminar una clave en un valor que no es objeto".to_string()))
         }
     }
 
-    /// Agrega un elemento a un array JSON
-    fn push(&mut self, value: Box<dyn DynamicValue>) {
-        if let Value::Array(ref mut arr) = self.value {
-            if let Some(inner) = value.as_any().downcast_ref::<DynamicValueImpl>() {
-                arr.push(inner.value.clone());
-            } else {
-                panic!("Expected DynamicValueImpl")
-            }
+    fn push(&mut self, value: Self) -> DynamicResult<()> {
+        if let Value::Array(ref mut arr) = Arc::make_mut(&mut self.inner) {
+            arr.push((*value.inner).clone());
+            Ok(())
+        } else {
+            Err(DynamicError::TypeMismatch("No se puede agregar un elemento a un valor que no es arreglo".to_string()))
         }
     }
 
-    /// Convierte el JSON en una cadena de texto
     fn to_string(&self) -> String {
-        self.value.to_string()
+        self.inner.to_string()
     }
 
     fn is_empty(&self) -> bool {
-        match &self.value {
+        match &*self.inner {
             Value::Null => true,
             Value::String(s) if s.is_empty() => true,
             Value::Array(arr) if arr.is_empty() => true,
             Value::Object(obj) if obj.is_empty() => true,
             _ => false,
         }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn clone_box(&self) -> Box<dyn DynamicValue> {
-        Box::new(self.clone()) // Use the derived `Clone`
     }
 }

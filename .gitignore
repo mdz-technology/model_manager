@@ -1,0 +1,32 @@
+target/
+**/target/
+Cargo.lock
+
+# Archivos generados por Cargo
+Cargo.lock
+.cargo/
+
+# Archivos de compilación
+*.rlib
+*.d
+*.o
+*.so
+*.dylib
+*.dll
+
+# Archivos de depuración y perfiles
+*.profraw
+
+# Archivos de editores
+**/*.swp
+**/*.swo
+.idea/
+.vscode/
+
+# Archivos generados por pruebas
+/tests/output/
+
+# Binarios y ejecutables
+*.exe
+*.out
+*.app
