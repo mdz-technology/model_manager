@@ -9,7 +9,6 @@ path = "src/lib.rs"
 # generate to library compatible with C
 crate-type = ["rlib", "cdylib"] # Configuración opcional para crear librerías compartidas
 
-
 [dependencies]
 serde_json = "1.0.140"
 actix = { version = "0.13.5", features = ["default"] }
