@@ -10,19 +10,28 @@ use crate::model::infrastructure::get_message::GetMessage;
 use crate::model::infrastructure::insert_message::InsertMessage;
 use crate::model::infrastructure::update_message::UpdateMessage;
 
-pub struct ModelManagerImpl<T: DynamicValue + Unpin +'static> {
+pub struct ModelManagerImpl<T: DynamicValue + Unpin +'static + Send + Sync> {
     models: HashMap<String, Addr<ModelActor<T>>>,
 }
 
-impl<T: DynamicValue + Unpin + 'static + Send> ModelManager<T> for ModelManagerImpl<T> {
+impl<T: DynamicValue + Unpin + 'static + Send + Sync> ModelManagerImpl<T> {
+    fn get_addr_model_actor(&mut self, model_name: String) -> Addr<ModelActor<T>> {
+        self.models
+            .entry(model_name)
+            .or_insert_with(|| ModelActor::new_object().start())
+            .clone()
+    }
+}
 
+impl<T: DynamicValue + Unpin + 'static + Send + Sync> ModelManager for ModelManagerImpl<T> {
+    type Value = T;
     fn new() -> Self {
         ModelManagerImpl {
             models: HashMap::new(),
         }
     }
 
-    async fn insert(&mut self, model_name: String, id: Option<String>, data: T) -> Result<T, String> {
+    async fn insert(&mut self, model_name: String, id: Option<String>, data: Self::Value) -> Result<Self::Value, String> {
         let addr = self.get_addr_model_actor(model_name);
 
         let result = addr
@@ -38,7 +47,7 @@ impl<T: DynamicValue + Unpin + 'static + Send> ModelManager<T> for ModelManagerI
         }
     }
 
-    async fn update(&mut self, model_name: String, id: String, data: T) -> Result<T, String> {
+    async fn update(&mut self, model_name: String, id: String, data: Self::Value) -> Result<Self::Value, String> {
         let addr = self.get_addr_model_actor(model_name);
 
         let result = addr
@@ -54,7 +63,7 @@ impl<T: DynamicValue + Unpin + 'static + Send> ModelManager<T> for ModelManagerI
         }
     }
 
-    async fn get(&mut self, model_name: String, id: String) -> Result<T, String> {
+    async fn get(&mut self, model_name: String, id: String) -> Result<Self::Value, String> {
 
         let addr = self.get_addr_model_actor(model_name);
 
@@ -71,7 +80,7 @@ impl<T: DynamicValue + Unpin + 'static + Send> ModelManager<T> for ModelManagerI
         }
     }
 
-    async fn remove(&mut self, model_name: String, id: String) -> Result<T, String> {
+    async fn remove(&mut self, model_name: String, id: String) -> Result<Self::Value, String> {
         let addr = self.get_addr_model_actor(model_name);
 
         let result = addr.send(
@@ -87,7 +96,7 @@ impl<T: DynamicValue + Unpin + 'static + Send> ModelManager<T> for ModelManagerI
         }
     }
 
-    async fn get_all(&mut self, model_name: String) -> Result<Vec<T>, String> {
+    async fn get_all(&mut self, model_name: String) -> Result<Vec<Self::Value>, String> {
         let addr = self.get_addr_model_actor(model_name);
 
         let result = addr.send(
@@ -103,11 +112,3 @@ impl<T: DynamicValue + Unpin + 'static + Send> ModelManager<T> for ModelManagerI
     }
 }
 
-impl<T: DynamicValue + Unpin + 'static + Send> ModelManagerImpl<T> {
-    fn get_addr_model_actor(&mut self, model_name: String) -> Addr<ModelActor<T>> {
-        self.models
-            .entry(model_name)
-            .or_insert_with(|| ModelActor::new_object().start())
-            .clone()
-    }
-}

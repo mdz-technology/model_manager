@@ -1,5 +1,5 @@
-mod dynamic;
-mod model;
+pub mod dynamic;
+pub mod model;
 
 pub use dynamic::application::dynamic_value::DynamicValue;
 pub use model::application::model_manager::ModelManager;

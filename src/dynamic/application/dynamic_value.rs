@@ -10,7 +10,7 @@ pub enum DynamicError {
     // Se pueden agregar más variantes según necesidad.
 }
 
-pub trait DynamicValue: Clone + Debug {
+pub trait DynamicValue: Clone + Debug + Send + Sync {
     fn new_object() -> Self;
     fn new_array() -> Self;
     fn from_str(s: &str) -> Self;
@@ -19,7 +19,7 @@ pub trait DynamicValue: Clone + Debug {
 
     fn is_object(&self) -> bool;
     fn is_array(&self) -> bool;
-    fn as_str(&self) -> Option<&str>;
+    fn as_str(&self) -> Option<String>;
     fn as_number(&self) -> Option<f64>;
     fn as_bool(&self) -> Option<bool>;
     fn as_map(&self) -> Option<HashMap<String, Self>>;
@@ -33,5 +33,6 @@ pub trait DynamicValue: Clone + Debug {
 
     fn to_string(&self) -> String;
     fn is_empty(&self) -> bool;
+    fn get_type(&self) -> String;
 
 }

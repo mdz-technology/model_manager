@@ -5,12 +5,12 @@ use crate::model::infrastructure::model_actor::ModelActor;
 
 #[derive(Message)]
 #[rtype(result = "Result<T, String>")]
-pub struct GetMessage<T: DynamicValue + 'static> {
+pub struct GetMessage<T: DynamicValue + 'static + Send + Sync> {
     pub id: String,
     pub _marker: PhantomData<T>,
 }
 
-impl<T: DynamicValue + Unpin + 'static> Handler<GetMessage<T>> for ModelActor<T> {
+impl<T: DynamicValue + Unpin + 'static + Send + Sync> Handler<GetMessage<T>> for ModelActor<T> {
     type Result = Result<T, String>;
 
     fn handle(&mut self, message: GetMessage<T>, _ctx: &mut Self::Context) -> Self::Result {
