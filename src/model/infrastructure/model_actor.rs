@@ -1,11 +1,11 @@
 use actix::prelude::*;
 use crate::dynamic::application::dynamic_value::{DynamicResult, DynamicValue};
 
-pub struct ModelActor<T: DynamicValue> {
+pub struct ModelActor<T: DynamicValue + Send + Sync +'static> {
     state: T,
 }
 
-impl<T: DynamicValue+ 'static> ModelActor<T> {
+impl<T: DynamicValue + Send + Sync + 'static> ModelActor<T> {
     pub fn new(data: T) -> Self {
         Self { state: data }
     }
@@ -40,7 +40,7 @@ impl<T: DynamicValue+ 'static> ModelActor<T> {
 
 }
 
-impl<T: DynamicValue + Unpin + 'static> Actor for ModelActor<T> {
+impl<T: DynamicValue + Unpin + 'static + Send + Sync> Actor for ModelActor<T> {
     type Context = Context<Self>;
 }
 

@@ -1,22 +1,14 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use serde_json::{Map, Number, Value};
 use crate::dynamic::application::dynamic_value::{DynamicValue, DynamicError, DynamicResult};
 
 #[derive(Debug, Clone)]
-pub struct  DynamicValueImpl {
-    inner: Arc<Value>
-}
-
-impl DynamicValueImpl {
-    fn new(inner: Value) -> Self {
-        Self { inner: Arc::new(inner) }
-    }
-
+pub struct DynamicValueImpl {
+    inner: Arc<RwLock<Value>>,
 }
 
 impl DynamicValue for DynamicValueImpl {
-
     fn new_object() -> Self {
         Self::new(Value::Object(Map::new()))
     }
@@ -33,7 +25,9 @@ impl DynamicValue for DynamicValueImpl {
         if let Some(num) = Number::from_f64(n) {
             Ok(Self::new(Value::Number(num)))
         } else {
-            Err(DynamicError::InvalidNumber("Número inválido (NaN o infinito)".to_string()))
+            Err(DynamicError::InvalidNumber(
+                "Número inválido (NaN o infinito)".to_string(),
+            ))
         }
     }
 
@@ -42,27 +36,27 @@ impl DynamicValue for DynamicValueImpl {
     }
 
     fn is_object(&self) -> bool {
-        self.inner.is_object()
+        self.inner.read().unwrap().is_object()
     }
 
     fn is_array(&self) -> bool {
-        self.inner.is_array()
+        self.inner.read().unwrap().is_array()
     }
 
-    fn as_str(&self) -> Option<&str> {
-        self.inner.as_str()
+    fn as_str(&self) -> Option<String> {
+        self.inner.read().unwrap().as_str().map(|s| s.to_string())
     }
 
     fn as_number(&self) -> Option<f64> {
-        self.inner.as_f64()
+        self.inner.read().unwrap().as_f64()
     }
 
     fn as_bool(&self) -> Option<bool> {
-        self.inner.as_bool()
+        self.inner.read().unwrap().as_bool()
     }
 
     fn as_map(&self) -> Option<HashMap<String, Self>> {
-        self.inner.as_object().map(|map| {
+        self.inner.read().unwrap().as_object().map(|map| {
             map.iter()
                 .map(|(k, v)| (k.clone(), Self::new(v.clone())))
                 .collect()
@@ -70,17 +64,17 @@ impl DynamicValue for DynamicValueImpl {
     }
 
     fn as_array(&self) -> Option<Vec<Self>> {
-        self.inner.as_array().map(|arr| {
+        self.inner.read().unwrap().as_array().map(|arr| {
             arr.iter().map(|v| Self::new(v.clone())).collect()
         })
     }
 
     fn get(&self, key: &str) -> Option<Self> {
-        self.inner.get(key).map(|v| Self::new(v.clone()))
+        self.inner.read().unwrap().get(key).map(|v| Self::new(v.clone()))
     }
 
     fn get_all(&self) -> Vec<Self> {
-        if let Value::Object(ref map) = *self.inner {
+        if let Value::Object(ref map) = *self.inner.read().unwrap() {
             map.values().map(|v| Self::new(v.clone())).collect()
         } else {
             vec![]
@@ -88,38 +82,48 @@ impl DynamicValue for DynamicValueImpl {
     }
 
     fn set(&mut self, key: &str, value: Self) -> DynamicResult<()> {
-        if let Value::Object(ref mut map) = Arc::make_mut(&mut self.inner) {
-            map.insert(key.to_string(), (*value.inner).clone());
+        let mut lock = self.inner.write().unwrap();
+        if let Value::Object(ref mut map) = *lock {
+            map.insert(key.to_string(), (*value.inner.read().unwrap()).clone());
             Ok(())
         } else {
-            Err(DynamicError::TypeMismatch("No se puede establecer una clave en un valor que no es objeto".to_string()))
+            Err(DynamicError::TypeMismatch(
+                "No se puede establecer una clave en un valor que no es objeto".to_string(),
+            ))
         }
     }
 
     fn remove(&mut self, key: &str) -> DynamicResult<()> {
-        if let Value::Object(ref mut map) = Arc::make_mut(&mut self.inner) {
+        let mut lock = self.inner.write().unwrap();
+        if let Value::Object(ref mut map) = *lock {
             map.remove(key);
             Ok(())
         } else {
-            Err(DynamicError::TypeMismatch("No se puede eliminar una clave en un valor que no es objeto".to_string()))
+            Err(DynamicError::TypeMismatch(
+                "No se puede eliminar una clave en un valor que no es objeto".to_string(),
+            ))
         }
     }
 
     fn push(&mut self, value: Self) -> DynamicResult<()> {
-        if let Value::Array(ref mut arr) = Arc::make_mut(&mut self.inner) {
-            arr.push((*value.inner).clone());
+        let mut lock = self.inner.write().unwrap();
+        if let Value::Array(ref mut arr) = *lock {
+            arr.push((*value.inner.read().unwrap()).clone());
             Ok(())
         } else {
-            Err(DynamicError::TypeMismatch("No se puede agregar un elemento a un valor que no es arreglo".to_string()))
+            Err(DynamicError::TypeMismatch(
+                "No se puede agregar un elemento a un valor que no es arreglo".to_string(),
+            ))
         }
     }
 
     fn to_string(&self) -> String {
-        self.inner.to_string()
+        self.inner.read().unwrap().to_string()
     }
 
     fn is_empty(&self) -> bool {
-        match &*self.inner {
+        let lock = self.inner.read().unwrap();
+        match &*lock {
             Value::Null => true,
             Value::String(s) if s.is_empty() => true,
             Value::Array(arr) if arr.is_empty() => true,
@@ -127,4 +131,28 @@ impl DynamicValue for DynamicValueImpl {
             _ => false,
         }
     }
+
+    fn get_type(&self) -> String {
+        let lock = self.inner.read().unwrap();
+        match &*lock {
+            Value::Null => "Null".to_string(),
+            Value::Bool(_) => "Bool".to_string(),
+            Value::Number(_) => "Number".to_string(),
+            Value::String(_) => "String".to_string(),
+            Value::Array(_) => "Array".to_string(),
+            Value::Object(_) => "Object".to_string(),
+        }
+    }
+}
+
+impl DynamicValueImpl {
+    fn new(inner: Value) -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(inner)),
+        }
+    }
+    pub(crate) fn from_serde_value(value: Value) -> Self {
+        Self::new(value)
+    }
+
 }
