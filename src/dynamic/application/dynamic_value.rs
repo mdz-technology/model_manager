@@ -7,7 +7,9 @@ pub type DynamicResult<T> = Result<T, DynamicError>;
 pub enum DynamicError {
     TypeMismatch(String),
     InvalidNumber(String),
-    // Se pueden agregar más variantes según necesidad.
+    PathNotFound(String),
+    InvalidPath(String),
+    SerializationError(String),
 }
 
 pub trait DynamicValue: Clone + Debug + Send + Sync {
@@ -34,5 +36,36 @@ pub trait DynamicValue: Clone + Debug + Send + Sync {
     fn to_string(&self) -> String;
     fn is_empty(&self) -> bool;
     fn get_type(&self) -> String;
+
+    fn iter_object(&self) -> Option<Box<dyn Iterator<Item = (String, Self)> + '_>>;
+    fn iter_array(&self) -> Option<Box<dyn Iterator<Item = Self> + '_>>;
+
+    fn get_by_path(&self, path: &str) -> DynamicResult<Option<Self>>;
+    fn set_by_path(&mut self, path: &str, value: Self) -> DynamicResult<()>;
+    fn deep_clone(&self) -> Self;
+    fn merge(&mut self, other: &Self) -> DynamicResult<()>;
+
+    fn keys(&self) -> Vec<String>;
+    fn matches_schema(&self, schema: &Self) -> bool;
+
+    fn is_valid_path(path: &str) -> bool where Self: Sized {
+        if path.is_empty() {
+            return false;
+        }
+
+        if path.starts_with('.') || path.ends_with('.') {
+            return false;
+        }
+
+        if path.contains("..") {
+            return false;
+        }
+
+        path.split('.').all(|part| !part.is_empty())
+    }
+
+    fn split_path(path: &str) -> Vec<String> where Self: Sized {
+        path.split('.').map(|s| s.to_string()).collect()
+    }
 
 }

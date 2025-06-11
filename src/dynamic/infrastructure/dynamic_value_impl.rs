@@ -143,6 +143,160 @@ impl DynamicValue for DynamicValueImpl {
             Value::Object(_) => "Object".to_string(),
         }
     }
+
+    fn iter_object(&self) -> Option<Box<dyn Iterator<Item=(String, Self)> + '_>> {
+        let lock = self.inner.read().unwrap();
+        if let Value::Object(ref map) = *lock {
+            let items: Vec<(String, Self)> = map.iter()
+                .map(|(k, v)| (k.clone(), Self::new(v.clone())))
+                .collect();
+
+            drop(lock);
+            Some(Box::new(items.into_iter()))
+        } else {
+            None
+        }
+    }
+
+    fn iter_array(&self) -> Option<Box<dyn Iterator<Item=Self> + '_>> {
+        let lock = self.inner.read().unwrap();
+        if let Value::Array(ref arr) = *lock {
+            let items: Vec<Self> = arr.iter()
+                .map(|v| Self::new(v.clone()))
+                .collect();
+            drop(lock);
+            Some(Box::new(items.into_iter()))
+        } else {
+            None
+        }
+    }
+
+    fn get_by_path(&self, path: &str) -> DynamicResult<Option<Self>> {
+        if !Self::is_valid_path(path) {
+            return Err(DynamicError::InvalidPath(
+                format!("Path inválido: '{}'", path)
+            ));
+        }
+
+        let parts = Self::split_path(path);
+        let mut current = self.clone();
+
+        for part in parts {
+            if let Some(next) = current.get(&part) {
+                current = next;
+            } else {
+                return Ok(None); // Path no encontrado, pero válido
+            }
+        }
+
+        Ok(Some(current))
+    }
+
+    fn set_by_path(&mut self, path: &str, value: Self) -> DynamicResult<()> {
+        if !Self::is_valid_path(path) {
+            return Err(DynamicError::InvalidPath(
+                format!("Path inválido: '{}'", path)
+            ));
+        }
+
+        let parts = Self::split_path(path);
+        if parts.is_empty() {
+            return Err(DynamicError::InvalidPath("Path vacío".to_string()));
+        }
+
+        if parts.len() == 1 {
+            return self.set(&parts[0], value);
+        }
+
+        self.set_by_path_simplified(&parts, value)
+    }
+
+    fn deep_clone(&self) -> Self {
+        let lock = self.inner.read().unwrap();
+        let cloned_value = lock.clone();
+        drop(lock);
+        Self::new(cloned_value)
+    }
+
+    fn merge(&mut self, other: &Self) -> DynamicResult<()> {
+        if !self.is_object() {
+            return Err(DynamicError::TypeMismatch(
+                "Solo se pueden mergear objetos".to_string()
+            ));
+        }
+
+        if !other.is_object() {
+            return Err(DynamicError::TypeMismatch(
+                "El valor a mergear debe ser un objeto".to_string()
+            ));
+        }
+
+        if let Some(other_iter) = other.iter_object() {
+            for (key, value) in other_iter {
+                if let Some(existing) = self.get(&key) {
+                    if existing.is_object() && value.is_object() {
+                        let mut existing_clone = existing.clone();
+                        existing_clone.merge(&value)?;
+                        self.set(&key, existing_clone)?;
+                    } else {
+                        self.set(&key, value)?;
+                    }
+                } else {
+                    self.set(&key, value)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn keys(&self) -> Vec<String> {
+        let lock = self.inner.read().unwrap();
+        if let Value::Object(ref map) = *lock {
+            map.keys().cloned().collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    //TODO: basic implementation, improve later
+    fn matches_schema(&self, schema: &Self) -> bool {
+        let self_type = self.get_type();
+        let schema_lock = schema.inner.read().unwrap();
+
+        match &*schema_lock {
+            Value::String(expected_type) => {
+                // Schema simple: {"field": "string", "other": "number"}
+                match expected_type.as_str() {
+                    "string" => self_type == "String",
+                    "number" => self_type == "Number",
+                    "boolean" => self_type == "Bool",
+                    "object" => self_type == "Object",
+                    "array" => self_type == "Array",
+                    "null" => self_type == "Null",
+                    _ => false,
+                }
+            },
+            Value::Object(schema_map) => {
+                if !self.is_object() {
+                    return false;
+                }
+
+                for (key, expected_type_value) in schema_map {
+                    if let Some(actual_value) = self.get(key) {
+                        let expected_schema = Self::new(expected_type_value.clone());
+                        if !actual_value.matches_schema(&expected_schema) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                true
+            },
+            _ => false,
+        }
+    }
 }
 
 impl DynamicValueImpl {
@@ -151,8 +305,33 @@ impl DynamicValueImpl {
             inner: Arc::new(RwLock::new(inner)),
         }
     }
-    pub(crate) fn from_serde_value(value: Value) -> Self {
+    pub fn from_serde_value(value: Value) -> Self {
         Self::new(value)
+    }
+
+    fn set_by_path_simplified(&mut self, parts: &[String], value: Self) -> DynamicResult<()> {
+        if parts.is_empty() {
+            return Err(DynamicError::InvalidPath("Path vacío".to_string()));
+        }
+
+        if parts.len() == 1 {
+            return self.set(&parts[0], value);
+        }
+
+        if !self.is_object() {
+            *self = Self::new_object();
+        }
+
+        let current_key = &parts[0];
+        let remaining_parts = &parts[1..];
+
+        let mut nested_value = self.get(current_key).unwrap_or_else(|| Self::new_object());
+
+        nested_value.set_by_path_simplified(remaining_parts, value)?;
+
+        self.set(current_key, nested_value)?;
+
+        Ok(())
     }
 
 }

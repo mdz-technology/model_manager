@@ -1,7 +1,7 @@
 use crate::DynamicValue;
 
-pub trait DynamicValueConverter<Input> {
+pub trait DynamicValueConverter<T> {
     type Output: DynamicValue;
 
-    fn convert(&self, input: Input) -> Result<Self::Output, String>;
+    fn convert(&self, input: T) -> Result<Self::Output, String>;
 }
