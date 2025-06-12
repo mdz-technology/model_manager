@@ -410,10 +410,54 @@ impl AsyncDynamicValue for CustomValue {
 - **Performance benchmarks** para cambios críticos
 - **Documentación actualizada** en README
 
-## 📄 Licencia
+## 📄 License
 
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+🆓 **Not making money with it?** → Free noncommercial license  
+💰 **Making money with it?** → One-time commercial license
 
+This project is dual-licensed:
+- [Noncommercial License](LICENSE-NONCOMMERCIAL) for free use
+- [Commercial License](LICENSE-COMMERCIAL-TERMS) for business use
 
+See [LICENSE](LICENSE) for details.
 
+### 🔍 Which License Do I Need?
 
+```
+Are you making money using this software?
+├── 🚫 NO → Free license
+└── 💰 YES → Commercial license (one-time payment)
+```
+
+### 💼 Commercial License
+- **One-time payment** - no recurring fees
+- **Unlimited projects** with the license
+- **Full commercial rights**
+- **30-day evaluation** available
+
+**Get quote:** licensing@your-domain.com
+
+### 🆓 Free License (Noncommercial)
+- ✅ Personal projects
+- ✅ Learning and education
+- ✅ Open source projects
+- ✅ Internal tools (not sold)
+- ✅ Research and experiments
+
+**[Read full terms →](LICENSE-NONCOMMERCIAL)**
+
+### 📞 License Questions?
+Email: rodframeh@gmail.com  
+Response time: Within 24 hours
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
+
+**By contributing, you agree to assign copyright to enable commercial licensing and project sustainability.**
+
+## 💬 Community
+
+- 🐛 [**Issue Tracker**](https://github.com/your-username/model_manager/issues)
+- 💡 [**Feature Requests**](https://github.com/your-username/model_manager/discussions)
+- 📧 [**Email Support**](mailto:rodframeh@gmail.com)
