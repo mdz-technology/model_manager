@@ -1,14 +1,14 @@
+pub mod application;
+pub mod infrastructure;
 
-pub mod dynamic;
-pub mod model;
+pub use application::traits::{
+    model_manager::ModelManager,
+    dynamic_value::DynamicValue,
+};
 
+pub use application::models::errors::{ModelError, ModelResult};
 
-pub use dynamic::application::dynamic_value::DynamicValue;
-pub use model::application::model_manager::ModelManager;
+pub use application::services::model_manager_factory::ModelManagerFactory;
 
-pub use dynamic::infrastructure::dynamic_value_impl::DynamicValueImpl;
-pub use model::infrastructure::model_manager_impl::ModelManagerImpl;
-
-pub use dynamic::application::dynamic_value_converter::DynamicValueConverter;
-pub use dynamic::infrastructure::json_to_dynamic_value_converter::JsonToDynamicValueConverter;
-
+pub type DefaultFactory = infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
+pub type DefaultValue = infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;

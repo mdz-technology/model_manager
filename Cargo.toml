@@ -2,6 +2,8 @@
 name = "model_manager"
 version = "1.0.0"
 edition = "2021"
+repository = "https://github.com/mdz-technology/model_manager"
+license-file = "LICENSE"
 
 [lib]
 name = "model_manager"
@@ -11,7 +13,9 @@ crate-type = ["rlib", "cdylib"] # Configuración opcional para crear librerías 
 
 [dependencies]
 serde_json = "1.0.140"
+serde = { version = "1.0", features = ["derive"] }
 actix = { version = "0.13.5", features = ["default"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 tokio = { version = "1.44.1", features = ["full"] }
-actix-rt = "2.10.0"
+thiserror = "1.0"
+
