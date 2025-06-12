@@ -3,42 +3,9 @@
 [![Rust](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/spreadapp/model-manager)
 
-> **Gestor asíncrono de múltiples modelos de datos para aplicaciones empresariales offline-first**
+> **Gestor asíncrono de múltiples modelos de datos para aplicaciones offline-first**
 
 Model Manager es un componente central del framework SpreadApp que proporciona gestión de datos completamente asíncrona con alta concurrencia, diseñado específicamente para aplicaciones empresariales que requieren rendimiento extremo y operación offline.
-
-## 🚀 Características Principales
-
-### ⚡ Performance Empresarial
-- **50,000+ operaciones/segundo** sostenidas
-- **Latencia P99 < 10ms** bajo carga extrema
-- **Concurrencia masiva**: 100,000+ operaciones simultáneas
-- **Memory efficiency**: Uso constante independiente del tamaño de datos
-
-### 🎯 Diseño Asíncrono Completo
-- **API 100% async/await** - No hay operaciones bloqueantes
-- **Sistema de actores** con Actix para aislamiento completo
-- **Streaming automático** para datasets masivos (>10K registros)
-- **Backpressure inteligente** para manejo de carga
-
-### 🏗️ Arquitectura Modular
-- **Separación por capas**: Aplicación → Infraestructura
-- **Dependency Inversion**: Interfaces definidas por aplicación
-- **Componentes intercambiables**: Storage, UI, protocolos
-- **Factory pattern** para creación de implementaciones
-
-### 🌐 Multi-Modelo Empresarial
-- **Aislamiento completo** entre modelos de datos
-- **CRUD asíncrono** para usuarios, productos, configuraciones
-- **Consistencia ACID** por modelo bajo carga extrema
-- **Recovery automático** de fallos de actores
-
-## 📋 Requisitos del Sistema
-
-- **Rust**: 1.70+ con edition 2021
-- **Tokio**: Runtime asíncrono completo
-- **Actix**: Sistema de actores para concurrencia
-- **Serde**: Serialización/deserialización de datos
 
 ## 🛠️ Instalación
 
@@ -50,7 +17,7 @@ model_manager = { path = "." }
 tokio = { version = "1.44", features = ["full"] }
 ```
 
-## 🎯 Ejemplo Básico de Uso
+## 🎯 Ejemplo Básico
 
 ```rust
 use model_manager::{
@@ -128,7 +95,7 @@ Total usuarios: 1
 Usuario eliminado: {"name":"Ana García Pérez","department":"Ingeniería"}
 ```
 
-## 🏢 Ejemplo Empresarial Avanzado
+## 🏢 Ejemplo Avanzado
 
 ### Operaciones Masivas Concurrentes
 
@@ -255,31 +222,6 @@ cargo test --test integration_tests
 cargo test --test performance_tests --release
 ```
 
-### Benchmarks Esperados
-
-```
-=== PERFORMANCE BENCHMARKS ===
-Single Operations (1,000 inserts):
-  Average: 847μs
-  Throughput: 1,181 ops/sec
-
-Bulk Operations (10,000 inserts):
-  Total time: 8.5s
-  Throughput: 1,176 ops/sec
-
-Multiple Models (5 models × 2,000 ops):
-  Total operations: 10,000
-  Overall throughput: 1,087 ops/sec
-
-Complex Data (1,000 nested structures):
-  Throughput: 142 ops/sec
-  Nested access: 100 accesses in 15ms
-
-Mixed Workload (5,000 ops):
-  60% reads, 30% inserts, 10% updates
-  Overall throughput: 625 ops/sec
-```
-
 ## 🏗️ Arquitectura del Sistema
 
 ### Estructura de Capas
@@ -328,70 +270,6 @@ Mixed Workload (5,000 ops):
 3. **Async-First**: Todas las operaciones críticas son asíncronas
 4. **Actor Isolation**: Cada modelo tiene su propio actor pool independiente
 5. **Memory Efficiency**: Streaming automático para datasets grandes
-
-## 📊 Métricas de Performance
-
-### Throughput por Operación
-
-| Operación | Throughput (ops/seg) | Latencia P95 | Latencia P99 |
-|-----------|---------------------|--------------|--------------|
-| Insert    | 50,000+             | 3.2ms        | 8.1ms        |
-| Get       | 75,000+             | 1.8ms        | 4.5ms        |
-| Update    | 45,000+             | 3.8ms        | 9.2ms        |
-| Get All   | 25,000+*            | 5.2ms        | 12.1ms       |
-| Remove    | 55,000+             | 2.1ms        | 5.8ms        |
-
-*Para datasets <10K registros. Datasets >10K usan streaming automático.
-
-### Escalabilidad
-
-| Concurrencia | Memory Usage | CPU Usage | Success Rate |
-|--------------|--------------|-----------|--------------|
-| 1,000 ops    | 45MB         | 12%       | 99.99%       |
-| 10,000 ops   | 127MB        | 35%       | 99.97%       |
-| 50,000 ops   | 285MB        | 67%       | 99.95%       |
-| 100,000 ops  | 512MB        | 89%       | 99.87%       |
-
-## 🔧 Configuración Avanzada
-
-### Factory Personalizado
-
-```rust
-use model_manager::{ModelManagerFactory, AsyncModelManager, AsyncDynamicValue};
-
-pub struct CustomFactory;
-
-impl<T: AsyncDynamicValue> ModelManagerFactory<T> for CustomFactory {
-    type Manager = CustomModelManager<T>;
-    
-    fn create() -> Self::Manager {
-        CustomModelManager::new_with_config(CustomConfig {
-            max_concurrent_ops: 100_000,
-            operation_timeout_ms: 30_000,
-            enable_metrics: true,
-            actor_pool_size: 16,
-        })
-    }
-}
-```
-
-### DynamicValue Personalizado
-
-```rust
-use model_manager::AsyncDynamicValue;
-
-#[derive(Clone, Debug)]
-pub struct CustomValue {
-    // Tu implementación personalizada
-}
-
-impl AsyncDynamicValue for CustomValue {
-    // Implementar todos los métodos requeridos
-    fn new_object() -> Self { /* ... */ }
-    fn new_array() -> Self { /* ... */ }
-    // ... resto de métodos
-}
-```
 
 ## 🤝 Contribuciones
 
@@ -447,8 +325,7 @@ Are you making money using this software?
 **[Read full terms →](LICENSE-NONCOMMERCIAL)**
 
 ### 📞 License Questions?
-Email: rodframeh@gmail.com  
-Response time: Within 24 hours
+Email: rodframeh@gmail.com 
 
 ## 🤝 Contributing
 
@@ -458,6 +335,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
 
 ## 💬 Community
 
-- 🐛 [**Issue Tracker**](https://github.com/your-username/model_manager/issues)
-- 💡 [**Feature Requests**](https://github.com/your-username/model_manager/discussions)
+- 🐛 [**Issue Tracker**](https://github.com/mdz-technology/model_manager/issues)
+- 💡 [**Feature Requests**](https://github.com/mdz-technology/model_manager/discussions)
 - 📧 [**Email Support**](mailto:rodframeh@gmail.com)
