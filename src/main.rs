@@ -1,6 +1,6 @@
 use model_manager::{
-    AsyncModelManager,
-    AsyncDynamicValue,
+    ModelManager,
+    DynamicValue,
     ModelManagerFactory,
     DefaultFactory,
     DefaultValue,
@@ -24,11 +24,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // INPUT
         let mut user = DefaultValue::new_object();
-        user.set_async("name", DefaultValue::from_str("Ana García")).await?;
-        user.set_async("email", DefaultValue::from_str("ana@empresa.com")).await?;
-        user.set_async("department", DefaultValue::from_str("Ventas")).await?;
-        user.set_async("active", DefaultValue::from_bool(true)).await?;
-        user.set_async("age", DefaultValue::from_number(28.0)?).await?;
+        user.set("name", DefaultValue::from_str("Ana García")).await?;
+        user.set("email", DefaultValue::from_str("ana@empresa.com")).await?;
+        user.set("department", DefaultValue::from_str("Ventas")).await?;
+        user.set("active", DefaultValue::from_bool(true)).await?;
+        user.set("age", DefaultValue::from_number(28.0)?).await?;
 
         println!("INPUT: {}", user.to_string());
 
@@ -51,11 +51,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Update
         let mut updated_user = DefaultValue::new_object();
-        updated_user.set_async("name", DefaultValue::from_str("Ana García Pérez")).await?;
-        updated_user.set_async("email", DefaultValue::from_str("ana.garcia@empresa.com")).await?;
-        updated_user.set_async("department", DefaultValue::from_str("Ingeniería")).await?;
-        updated_user.set_async("active", DefaultValue::from_bool(true)).await?;
-        updated_user.set_async("age", DefaultValue::from_number(29.0)?).await?;
+        updated_user.set("name", DefaultValue::from_str("Ana García Pérez")).await?;
+        updated_user.set("email", DefaultValue::from_str("ana.garcia@empresa.com")).await?;
+        updated_user.set("department", DefaultValue::from_str("Ingeniería")).await?;
+        updated_user.set("active", DefaultValue::from_bool(true)).await?;
+        updated_user.set("age", DefaultValue::from_number(29.0)?).await?;
 
         let updated = manager.update(
             "users".to_string(),
@@ -77,9 +77,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         for i in 1..=3 {
             let mut product = DefaultValue::new_object();
-            product.set_async("name", DefaultValue::from_str(&format!("Producto {}", i))).await?;
-            product.set_async("price", DefaultValue::from_number(99.99 * i as f64)?).await?;
-            product.set_async("stock", DefaultValue::from_number(100.0 - i as f64 * 10.0)?).await?;
+            product.set("name", DefaultValue::from_str(&format!("Producto {}", i))).await?;
+            product.set("price", DefaultValue::from_number(99.99 * i as f64)?).await?;
+            product.set("stock", DefaultValue::from_number(100.0 - i as f64 * 10.0)?).await?;
 
             let inserted_product = manager.insert(
                 "products".to_string(),
@@ -101,17 +101,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("\n=== EJEMPLO 3: OPERACIONES ASYNC EN DATOS ===");
 
         let mut complex_data = DefaultValue::new_object();
-        complex_data.set_async("title", DefaultValue::from_str("Datos Complejos")).await?;
+        complex_data.set("title", DefaultValue::from_str("Datos Complejos")).await?;
 
         let mut items = DefaultValue::new_array();
         for i in 1..=5 {
             let mut item = DefaultValue::new_object();
-            item.set_async("id", DefaultValue::from_number(i as f64)?).await?;
-            item.set_async("value", DefaultValue::from_str(&format!("Item {}", i))).await?;
-            items.push_async(item).await?;
+            item.set("id", DefaultValue::from_number(i as f64)?).await?;
+            item.set("value", DefaultValue::from_str(&format!("Item {}", i))).await?;
+            items.push(item).await?;
         }
 
-        complex_data.set_async("items", items).await?;
+        complex_data.set("items", items).await?;
 
         let complex_inserted = manager.insert(
             "complex".to_string(),
@@ -121,14 +121,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         println!("OUTPUT COMPLEX DATA: {}", complex_inserted.to_string());
 
-        let title = complex_inserted.get_async("title").await?.unwrap();
+        let title = complex_inserted.get("title").await?.unwrap();
         println!("Título extraído: {}", title.as_str().unwrap());
 
-        let items_array = complex_inserted.get_async("items").await?.unwrap();
-        if let Some(array) = items_array.as_array_async().await? {
+        let items_array = complex_inserted.get("items").await?.unwrap();
+        if let Some(array) = items_array.as_array().await? {
             println!("Items en el array: {}", array.len());
             for (i, item) in array.iter().enumerate() {
-                if let Some(value) = item.get_async("value").await? {
+                if let Some(value) = item.get("value").await? {
                     println!("  Item {}: {}", i + 1, value.as_str().unwrap());
                 }
             }

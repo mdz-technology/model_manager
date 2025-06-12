@@ -1,6 +1,6 @@
-use crate::AsyncDynamicValue;
+use crate::DynamicValue;
 
 pub trait DynamicValueFactory {
-    type Value: AsyncDynamicValue + Send + Sync;
+    type Value: DynamicValue + Send + Sync;
     fn create() -> Self::Value;
 }

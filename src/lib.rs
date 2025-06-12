@@ -2,8 +2,8 @@ pub mod application;
 pub mod infrastructure;
 
 pub use application::traits::{
-    model_manager::AsyncModelManager,
-    dynamic_value::AsyncDynamicValue,
+    model_manager::ModelManager,
+    dynamic_value::DynamicValue,
 };
 
 pub use application::models::errors::{ModelError, ModelResult};

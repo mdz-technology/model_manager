@@ -1,8 +1,8 @@
 use std::pin::Pin;
 use std::future::Future;
-use crate::{AsyncDynamicValue, ModelResult};
+use crate::{DynamicValue, ModelResult};
 
-pub trait AsyncModelManager<T: AsyncDynamicValue> {
+pub trait ModelManager<T: DynamicValue> {
 
     fn insert(
         &mut self,

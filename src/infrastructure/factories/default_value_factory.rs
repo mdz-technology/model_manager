@@ -1,5 +1,5 @@
 use crate::application::services::dynamic_value_factory::DynamicValueFactory;
-use crate::AsyncDynamicValue;
+use crate::DynamicValue;
 use crate::infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;
 
 pub struct DefaultValueFactory;

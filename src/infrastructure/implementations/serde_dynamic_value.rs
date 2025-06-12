@@ -1,7 +1,7 @@
 use std::pin::Pin;
 use std::future::Future;
 use serde_json::Value;
-use crate::{AsyncDynamicValue, ModelError, ModelResult};
+use crate::{DynamicValue, ModelError, ModelResult};
 
 #[derive(Debug, Clone)]
 pub struct SerdeDynamicValue {
@@ -18,7 +18,7 @@ impl SerdeDynamicValue {
     }
 }
 
-impl AsyncDynamicValue for SerdeDynamicValue {
+impl DynamicValue for SerdeDynamicValue {
 
     fn new_object() -> Self {
         Self {
@@ -97,7 +97,7 @@ impl AsyncDynamicValue for SerdeDynamicValue {
         self.inner.as_bool()
     }
 
-    fn get_async<'a>(
+    fn get<'a>(
         &'a self,
         key: &'a str
     ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Self>>> + Send + 'a>> {
@@ -106,7 +106,7 @@ impl AsyncDynamicValue for SerdeDynamicValue {
         })
     }
 
-    fn set_async<'a>(
+    fn set<'a>(
         &'a mut self,
         key: &'a str,
         value: Self
@@ -124,7 +124,7 @@ impl AsyncDynamicValue for SerdeDynamicValue {
         })
     }
 
-    fn push_async<'a>(
+    fn push<'a>(
         &'a mut self,
         value: Self
     ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>> {
@@ -141,7 +141,7 @@ impl AsyncDynamicValue for SerdeDynamicValue {
         })
     }
 
-    fn as_array_async<'a>(
+    fn as_array<'a>(
         &'a self
     ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Vec<Self>>>> + Send + 'a>> {
         Box::pin(async move {

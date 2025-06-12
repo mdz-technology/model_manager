@@ -1,5 +1,5 @@
 use tokio::task::LocalSet;
-use model_manager::{AsyncDynamicValue, AsyncModelManager, DefaultValue, ModelManagerFactory};
+use model_manager::{DynamicValue, ModelManager, DefaultValue, ModelManagerFactory};
 use model_manager::infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
 
 #[tokio::test]
@@ -11,8 +11,8 @@ async fn test_basic_crud_operations() {
 
         // Create data
         let mut user_data = DefaultValue::new_object();
-        user_data.set_async("name", DefaultValue::from_str("John Doe")).await.unwrap();
-        user_data.set_async("age", DefaultValue::from_number(30.0).unwrap()).await.unwrap();
+        user_data.set("name", DefaultValue::from_str("John Doe")).await.unwrap();
+        user_data.set("age", DefaultValue::from_number(30.0).unwrap()).await.unwrap();
 
         // Insert
         let inserted = manager
@@ -20,7 +20,7 @@ async fn test_basic_crud_operations() {
             .await
             .unwrap();
 
-        assert_eq!(inserted.get_async("name").await.unwrap().unwrap().as_str().unwrap(), "John Doe");
+        assert_eq!(inserted.get("name").await.unwrap().unwrap().as_str().unwrap(), "John Doe");
 
         // Get
         let retrieved = manager
@@ -28,19 +28,19 @@ async fn test_basic_crud_operations() {
             .await
             .unwrap();
 
-        assert_eq!(retrieved.get_async("age").await.unwrap().unwrap().as_number().unwrap(), 30.0);
+        assert_eq!(retrieved.get("age").await.unwrap().unwrap().as_number().unwrap(), 30.0);
 
         // Update
         let mut updated_data = DefaultValue::new_object();
-        updated_data.set_async("name", DefaultValue::from_str("Jane Doe")).await.unwrap();
-        updated_data.set_async("age", DefaultValue::from_number(25.0).unwrap()).await.unwrap();
+        updated_data.set("name", DefaultValue::from_str("Jane Doe")).await.unwrap();
+        updated_data.set("age", DefaultValue::from_number(25.0).unwrap()).await.unwrap();
 
         let updated = manager
             .update("users".to_string(), "user_1".to_string(), updated_data)
             .await
             .unwrap();
 
-        assert_eq!(updated.get_async("name").await.unwrap().unwrap().as_str().unwrap(), "Jane Doe");
+        assert_eq!(updated.get("name").await.unwrap().unwrap().as_str().unwrap(), "Jane Doe");
 
         // Get all
         let all_users = manager
@@ -56,7 +56,7 @@ async fn test_basic_crud_operations() {
             .await
             .unwrap();
 
-        assert_eq!(removed.get_async("name").await.unwrap().unwrap().as_str().unwrap(), "Jane Doe");
+        assert_eq!(removed.get("name").await.unwrap().unwrap().as_str().unwrap(), "Jane Doe");
 
         // Verify removal
         let empty_list = manager
@@ -77,11 +77,11 @@ async fn test_multiple_models() {
 
         // Insert
         let mut user = DefaultValue::new_object();
-        user.set_async("name", DefaultValue::from_str("Test User")).await.unwrap();
+        user.set("name", DefaultValue::from_str("Test User")).await.unwrap();
 
         let mut product = DefaultValue::new_object();
-        product.set_async("name", DefaultValue::from_str("Test Product")).await.unwrap();
-        product.set_async("price", DefaultValue::from_number(99.99).unwrap()).await.unwrap();
+        product.set("name", DefaultValue::from_str("Test Product")).await.unwrap();
+        product.set("price", DefaultValue::from_number(99.99).unwrap()).await.unwrap();
 
         // Insert
         manager.insert("users".to_string(), None, user).await.unwrap();
@@ -106,8 +106,8 @@ async fn test_sequential_operations() {
         // Create and insert 10 items sequential (la concurrencia ocurre dentro del actor system)
         for i in 0..10 {
             let mut data = DefaultValue::new_object();
-            data.set_async("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            data.set_async("name", DefaultValue::from_str(&format!("User {}", i))).await.unwrap();
+            data.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
+            data.set("name", DefaultValue::from_str(&format!("User {}", i))).await.unwrap();
 
             // Insert
             let result = manager.insert("sequential_users".to_string(), None, data).await;
@@ -132,9 +132,9 @@ async fn test_actor_system_stress() {
         // Fase 1: Inserción rápida de múltiples elementos
         for i in 0..50 {
             let mut data = DefaultValue::new_object();
-            data.set_async("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            data.set_async("name", DefaultValue::from_str(&format!("User {}", i))).await.unwrap();
-            data.set_async("batch", DefaultValue::from_str("stress_test")).await.unwrap();
+            data.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
+            data.set("name", DefaultValue::from_str(&format!("User {}", i))).await.unwrap();
+            data.set("batch", DefaultValue::from_str("stress_test")).await.unwrap();
 
             let result = manager.insert("stress_users".to_string(), None, data).await;
             assert!(result.is_ok(), "Failed to insert user {}", i);
@@ -148,8 +148,8 @@ async fn test_actor_system_stress() {
         for i in 0..10 {
             // Crear productos en paralelo a los usuarios
             let mut product = DefaultValue::new_object();
-            product.set_async("name", DefaultValue::from_str(&format!("Product {}", i))).await.unwrap();
-            product.set_async("price", DefaultValue::from_number(10.0 * i as f64).unwrap()).await.unwrap();
+            product.set("name", DefaultValue::from_str(&format!("Product {}", i))).await.unwrap();
+            product.set("price", DefaultValue::from_number(10.0 * i as f64).unwrap()).await.unwrap();
 
             let result = manager.insert("stress_products".to_string(), None, product).await;
             assert!(result.is_ok());
@@ -176,18 +176,18 @@ async fn test_dynamic_value_operations() {
         let mut obj = DefaultValue::new_object();
 
         // Test setting values usando trait
-        obj.set_async("string_field", DefaultValue::from_str("test")).await.unwrap();
-        obj.set_async("number_field", DefaultValue::from_number(42.5).unwrap()).await.unwrap();
-        obj.set_async("bool_field", DefaultValue::from_bool(true)).await.unwrap();
+        obj.set("string_field", DefaultValue::from_str("test")).await.unwrap();
+        obj.set("number_field", DefaultValue::from_number(42.5).unwrap()).await.unwrap();
+        obj.set("bool_field", DefaultValue::from_bool(true)).await.unwrap();
 
         // Test getting values usando trait
-        let string_val = obj.get_async("string_field").await.unwrap().unwrap();
+        let string_val = obj.get("string_field").await.unwrap().unwrap();
         assert_eq!(string_val.as_str().unwrap(), "test");
 
-        let number_val = obj.get_async("number_field").await.unwrap().unwrap();
+        let number_val = obj.get("number_field").await.unwrap().unwrap();
         assert_eq!(number_val.as_number().unwrap(), 42.5);
 
-        let bool_val = obj.get_async("bool_field").await.unwrap().unwrap();
+        let bool_val = obj.get("bool_field").await.unwrap().unwrap();
         assert_eq!(bool_val.as_bool().unwrap(), true);
 
         // Test type checking usando trait
@@ -197,13 +197,13 @@ async fn test_dynamic_value_operations() {
 
         // Test array operations usando trait
         let mut arr = DefaultValue::new_array();
-        arr.push_async(DefaultValue::from_str("item1")).await.unwrap();
-        arr.push_async(DefaultValue::from_number(123.0).unwrap()).await.unwrap();
+        arr.push(DefaultValue::from_str("item1")).await.unwrap();
+        arr.push(DefaultValue::from_number(123.0).unwrap()).await.unwrap();
 
         assert!(arr.is_array());
         assert_eq!(arr.get_type(), "Array");
 
-        let arr_vec = arr.as_array_async().await.unwrap().unwrap();
+        let arr_vec = arr.as_array().await.unwrap().unwrap();
         assert_eq!(arr_vec.len(), 2);
         assert_eq!(arr_vec[0].as_str().unwrap(), "item1");
         assert_eq!(arr_vec[1].as_number().unwrap(), 123.0);

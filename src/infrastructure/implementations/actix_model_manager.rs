@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use actix::{Actor, Addr};
-use crate::{AsyncDynamicValue, AsyncModelManager, ModelResult};
+use crate::{DynamicValue, ModelManager, ModelResult};
 use crate::infrastructure::actors::messages::{GetAllMessage, GetMessage, InsertMessage, RemoveMessage, UpdateMessage};
 use crate::infrastructure::actors::model_actor::ModelActor;
 
-pub struct ActixModelManager<T: AsyncDynamicValue> {
+pub struct ActixModelManager<T: DynamicValue> {
     actors: HashMap<String, Addr<ModelActor<T>>>,
 }
 
-impl<T: AsyncDynamicValue + Unpin> ActixModelManager<T> {
+impl<T: DynamicValue + Unpin> ActixModelManager<T> {
 
     pub fn new() -> Self {
         Self {
@@ -26,7 +26,7 @@ impl<T: AsyncDynamicValue + Unpin> ActixModelManager<T> {
     }
 }
 
-impl<T: AsyncDynamicValue + Unpin> AsyncModelManager<T> for ActixModelManager<T> {
+impl<T: DynamicValue + Unpin> ModelManager<T> for ActixModelManager<T> {
     fn insert(
         &mut self,
         model_name: String,
