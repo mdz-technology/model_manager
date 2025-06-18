@@ -16,6 +16,153 @@ impl SerdeDynamicValue {
     pub fn into_value(self) -> Value {
         self.inner
     }
+
+    fn parse_path(path: &str) -> Vec<&str> {
+        if path.is_empty() {
+            Vec::new()
+        } else {
+            path.split('.').collect()
+        }
+    }
+    
+    fn navigate_to_value<'a>(
+        &'a self,
+        parts: &'a [&str]
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Self>>> + Send + 'a>> {
+        Box::pin(async move {
+            if parts.is_empty() {
+                return Ok(Some(self.clone()));
+            }
+
+            let current_key = parts[0];
+            let remaining_parts = &parts[1..];
+
+            if !self.is_object() {
+                return Ok(None);
+            }
+
+            match self.inner.get(current_key) {
+                Some(value) => {
+                    let next_value = Self::from_value(value.clone());
+                    next_value.navigate_to_value(remaining_parts).await
+                }
+                None => {
+                    Ok(None)
+                }
+            }
+        })
+    }
+
+    fn set_by_path_internal<'a>(
+        &'a mut self,
+        parts: &'a [&str],
+        value: Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>> {
+        Box::pin(async move {
+            if parts.is_empty() {
+                return Err(ModelError::InvalidData("Cannot set empty path".to_string()));
+            }
+
+            if parts.len() == 1 {
+                return self.set(parts[0], value).await;
+            }
+
+            let current_key = parts[0];
+            let remaining_parts = &parts[1..];
+
+            if !self.is_object() {
+                return Err(ModelError::InvalidData(
+                    format!("Cannot set path '{}' on non-object value", current_key)
+                ));
+            }
+
+            let next_object = match self.inner.get_mut(current_key) {
+                Some(existing_value) => {
+                    if existing_value.is_object() {
+                        existing_value
+                    } else {
+                        *existing_value = Value::Object(serde_json::Map::new());
+                        existing_value
+                    }
+                }
+                None => {
+                    if let Value::Object(ref mut map) = &mut self.inner {
+                        map.insert(current_key.to_string(), Value::Object(serde_json::Map::new()));
+                        map.get_mut(current_key).unwrap()
+                    } else {
+                        return Err(ModelError::InvalidData(
+                            "Internal error: expected object".to_string()
+                        ));
+                    }
+                }
+            };
+
+            let mut next_dynamic = Self::from_value(next_object.clone());
+            next_dynamic.set_by_path_internal(remaining_parts, value).await?;
+            
+            *next_object = next_dynamic.inner;
+
+            Ok(())
+        })
+    }
+    
+    fn values_are_equal(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
+
+    pub async fn equals(&self, other: &Self) -> bool {
+        self.values_are_equal(other)
+    }
+
+    pub fn get_path_parts(path: &str) -> Vec<String> {
+        Self::parse_path(path)
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+    
+    pub fn is_valid_path(path: &str) -> bool {
+        if path.is_empty() {
+            return false;
+        }
+
+        let parts = Self::parse_path(path);
+        !parts.iter().any(|part| part.is_empty())
+    }
+
+    fn validate_path_for_setting(path: &str) -> ModelResult<()> {
+        if path.is_empty() {
+            return Err(ModelError::InvalidData("Empty path not allowed".to_string()));
+        }
+
+        let parts = Self::parse_path(path);
+        
+        for (index, part) in parts.iter().enumerate() {
+            if part.is_empty() {
+                return Err(ModelError::InvalidData(
+                    format!("Invalid path '{}': empty segment at position {}", path, index)
+                ));
+            }
+        }
+        
+        for part in &parts {
+            if part.contains('[') || part.contains(']') {
+                return Err(ModelError::InvalidData(
+                    format!("Invalid path '{}': array notation not supported in paths", path)
+                ));
+            }
+        }
+
+        Ok(())
+    }
+    
+    fn normalize_path(path: &str) -> String {
+        path.trim()
+            .split('.')
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(".")
+    }
 }
 
 impl DynamicValue for SerdeDynamicValue {
@@ -159,5 +306,52 @@ impl DynamicValue for SerdeDynamicValue {
 
     fn to_string(&self) -> String {
         self.inner.to_string()
+    }
+
+    fn get_by_path<'a>(
+        &'a self,
+        path: &'a str
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Self>>> + Send + 'a>> {
+        Box::pin(async move {
+            let parts = Self::parse_path(path);
+            self.navigate_to_value(&parts).await
+        })
+    }
+
+    fn has_path<'a>(
+        &'a self,
+        path: &'a str
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>> {
+        Box::pin(async move {
+            match self.get_by_path(path).await? {
+                Some(_) => Ok(true),
+                None => Ok(false),
+            }
+        })
+    }
+
+    fn set_by_path<'a>(
+        &'a mut self,
+        path: &'a str,
+        value: Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>> {
+        Box::pin(async move {
+            Self::validate_path_for_setting(path)?;
+
+            let normalized_path = Self::normalize_path(path);
+            if normalized_path.is_empty() {
+                return Err(ModelError::InvalidData("Path becomes empty after normalization".to_string()));
+            }
+
+            let parts = Self::parse_path(&normalized_path);
+
+            if !self.is_object() {
+                return Err(ModelError::InvalidData(
+                    "Cannot set path on non-object root value".to_string()
+                ));
+            }
+
+            self.set_by_path_internal(&parts, value).await
+        })
     }
 }

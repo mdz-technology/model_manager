@@ -33,4 +33,19 @@ pub trait DynamicValue: Clone + Send + Sync + Unpin + 'static {
         &'a self
     ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Vec<Self>>>> + Send + 'a>>;
     fn to_string(&self) -> String;
+    fn get_by_path<'a>(
+        &'a self,
+        path: &'a str
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Self>>> + Send + 'a>>;
+
+    fn has_path<'a>(
+        &'a self,
+        path: &'a str
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>>;
+
+    fn set_by_path<'a>(
+        &'a mut self,
+        path: &'a str,
+        value: Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
 }

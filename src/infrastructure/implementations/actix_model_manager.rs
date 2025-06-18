@@ -3,7 +3,7 @@ use std::future::Future;
 use std::pin::Pin;
 use actix::{Actor, Addr};
 use crate::{DynamicValue, ModelManager, ModelResult};
-use crate::infrastructure::actors::messages::{GetAllMessage, GetMessage, InsertMessage, RemoveMessage, UpdateMessage};
+use crate::infrastructure::actors::messages::{FindByPathExistsMessage, FindByPathValueMessage, GetAllMessage, GetByPathMessage, GetMessage, InsertMessage, RemoveMessage, UpdateMessage};
 use crate::infrastructure::actors::model_actor::ModelActor;
 
 pub struct ActixModelManager<T: DynamicValue> {
@@ -95,6 +95,55 @@ impl<T: DynamicValue + Unpin> ModelManager<T> for ActixModelManager<T> {
 
         Box::pin(async move {
             let result = actor.send(GetAllMessage {
+                _phantom: std::marker::PhantomData,
+            }).await?;
+            result
+        })
+    }
+
+    fn get_by_path(
+        &mut self,
+        model_name: String,
+        id: String,
+        path: String,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<T>>> + Send + '_>> {
+        let actor = self.get_or_create_actor(&model_name);
+        Box::pin(async move {
+            let result = actor.send(GetByPathMessage {
+                id,
+                path,
+                _phantom: std::marker::PhantomData,
+            }).await?;
+            result
+        })
+    }
+
+    fn find_by_path_exists(
+        &mut self,
+        model_name: String,
+        path: String,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Vec<T>>> + Send + '_>> {
+        let actor = self.get_or_create_actor(&model_name);
+        Box::pin(async move {
+            let result = actor.send(FindByPathExistsMessage {
+                path,
+                _phantom: std::marker::PhantomData,
+            }).await?;
+            result
+        })
+    }
+
+    fn find_by_path_value(
+        &mut self,
+        model_name: String,
+        path: String,
+        expected_value: T,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Vec<T>>> + Send + '_>> {
+        let actor = self.get_or_create_actor(&model_name);
+        Box::pin(async move {
+            let result = actor.send(FindByPathValueMessage {
+                path,
+                expected_value,
                 _phantom: std::marker::PhantomData,
             }).await?;
             result

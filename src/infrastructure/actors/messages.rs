@@ -35,3 +35,26 @@ pub struct RemoveMessage<T: DynamicValue> {
 pub struct GetAllMessage<T: DynamicValue> {
     pub _phantom: std::marker::PhantomData<T>,
 }
+
+#[derive(Message)]
+#[rtype(result = "ModelResult<Option<T>>")]
+pub struct GetByPathMessage<T: DynamicValue> {
+    pub id: String,
+    pub path: String,
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
+#[derive(Message)]
+#[rtype(result = "ModelResult<Vec<T>>")]
+pub struct FindByPathExistsMessage<T: DynamicValue> {
+    pub path: String,
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
+#[derive(Message)]
+#[rtype(result = "ModelResult<Vec<T>>")]
+pub struct FindByPathValueMessage<T: DynamicValue> {
+    pub path: String,
+    pub expected_value: T,
+    pub _phantom: std::marker::PhantomData<T>,
+}
