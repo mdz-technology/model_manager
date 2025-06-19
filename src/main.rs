@@ -1,10 +1,4 @@
-use model_manager::{
-    ModelManager,
-    DynamicValue,
-    ModelManagerFactory,
-    DefaultFactory,
-    DefaultValue,
-};
+use model_manager::{ModelManager, DynamicValue, ModelManagerFactory, DefaultModelManager, DefaultValue, DynamicValueFactory};
 
 use tokio::task::LocalSet;
 
@@ -16,19 +10,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultFactory::create();
+        let mut manager = DefaultModelManager::create();
         println!("✅ Manager creado exitosamente\n");
 
         // === 1
         println!("=== EJEMPLO 1: OPERACIONES CRUD BÁSICAS ===");
 
         // INPUT
-        let mut user = DefaultValue::new_object();
-        user.set("name", DefaultValue::from_str("Ana García")).await?;
-        user.set("email", DefaultValue::from_str("ana@empresa.com")).await?;
-        user.set("department", DefaultValue::from_str("Ventas")).await?;
-        user.set("active", DefaultValue::from_bool(true)).await?;
-        user.set("age", DefaultValue::from_number(28.0)?).await?;
+        let mut user = DefaultValue::create();
+        user.set("name", <DefaultValue as DynamicValueFactory>::Value::from_str("Ana García")).await?;
+        user.set("email", <DefaultValue as DynamicValueFactory>::Value::from_str("ana@empresa.com")).await?;
+        user.set("department", <DefaultValue as DynamicValueFactory>::Value::from_str("Ventas")).await?;
+        user.set("active", <DefaultValue as DynamicValueFactory>::Value::from_bool(true)).await?;
+        user.set("age", <DefaultValue as DynamicValueFactory>::Value::from_number(28.0)?).await?;
 
         println!("INPUT: {}", user.to_string());
 
@@ -50,12 +44,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("OUTPUT GET: {}", retrieved.to_string());
 
         // Update
-        let mut updated_user = DefaultValue::new_object();
-        updated_user.set("name", DefaultValue::from_str("Ana García Pérez")).await?;
-        updated_user.set("email", DefaultValue::from_str("ana.garcia@empresa.com")).await?;
-        updated_user.set("department", DefaultValue::from_str("Ingeniería")).await?;
-        updated_user.set("active", DefaultValue::from_bool(true)).await?;
-        updated_user.set("age", DefaultValue::from_number(29.0)?).await?;
+        let mut updated_user = DefaultValue::create();
+        updated_user.set("name", <DefaultValue as DynamicValueFactory>::Value::from_str("Ana García Pérez")).await?;
+        updated_user.set("email", <DefaultValue as DynamicValueFactory>::Value::from_str("ana.garcia@empresa.com")).await?;
+        updated_user.set("department", <DefaultValue as DynamicValueFactory>::Value::from_str("Ingeniería")).await?;
+        updated_user.set("active", <DefaultValue as DynamicValueFactory>::Value::from_bool(true)).await?;
+        updated_user.set("age", <DefaultValue as DynamicValueFactory>::Value::from_number(29.0)?).await?;
 
         let updated = manager.update(
             "users".to_string(),
@@ -76,10 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("\n=== EJEMPLO 2: MÚLTIPLES MODELOS ===");
 
         for i in 1..=3 {
-            let mut product = DefaultValue::new_object();
-            product.set("name", DefaultValue::from_str(&format!("Producto {}", i))).await?;
-            product.set("price", DefaultValue::from_number(99.99 * i as f64)?).await?;
-            product.set("stock", DefaultValue::from_number(100.0 - i as f64 * 10.0)?).await?;
+            let mut product = DefaultValue::create();
+            product.set("name", <DefaultValue as DynamicValueFactory>::Value::from_str(&format!("Producto {}", i))).await?;
+            product.set("price", <DefaultValue as DynamicValueFactory>::Value::from_number(99.99 * i as f64)?).await?;
+            product.set("stock", <DefaultValue as DynamicValueFactory>::Value::from_number(100.0 - i as f64 * 10.0)?).await?;
 
             let inserted_product = manager.insert(
                 "products".to_string(),
@@ -100,14 +94,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // ===  3
         println!("\n=== EJEMPLO 3: OPERACIONES ASYNC EN DATOS ===");
 
-        let mut complex_data = DefaultValue::new_object();
-        complex_data.set("title", DefaultValue::from_str("Datos Complejos")).await?;
+        let mut complex_data = DefaultValue::create();
+        complex_data.set("title", <DefaultValue as DynamicValueFactory>::Value::from_str("Datos Complejos")).await?;
 
-        let mut items = DefaultValue::new_array();
+        // Crear array usando new_array desde el tipo Value
+        let mut items = <DefaultValue as DynamicValueFactory>::Value::new_array();
         for i in 1..=5 {
-            let mut item = DefaultValue::new_object();
-            item.set("id", DefaultValue::from_number(i as f64)?).await?;
-            item.set("value", DefaultValue::from_str(&format!("Item {}", i))).await?;
+            let mut item = <DefaultValue as DynamicValueFactory>::Value::new_object();
+            item.set("id", <DefaultValue as DynamicValueFactory>::Value::from_number(i as f64)?).await?;
+            item.set("value", <DefaultValue as DynamicValueFactory>::Value::from_str(&format!("Item {}", i))).await?;
             items.push(item).await?;
         }
 

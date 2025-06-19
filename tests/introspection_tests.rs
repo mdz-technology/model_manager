@@ -1,6 +1,7 @@
 use tokio::task::LocalSet;
-use model_manager::{DefaultValue, DynamicValue, ModelManager, ModelManagerFactory};
-use model_manager::infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
+use model_manager::{DefaultValue, DynamicValue, ModelManager, DefaultModelManager, DynamicValueFactory, ModelManagerFactory};
+
+type Value = <DefaultValue as DynamicValueFactory>::Value;
 
 #[tokio::test]
 async fn test_has_property_basic() {
@@ -8,10 +9,10 @@ async fn test_has_property_basic() {
 
     local_set.run_until(async {
         // Given: Objeto con propiedades conocidas
-        let mut user = DefaultValue::new_object();
-        user.set("name", DefaultValue::from_str("Ana García")).await.unwrap();
-        user.set("age", DefaultValue::from_number(28.0).unwrap()).await.unwrap();
-        user.set("active", DefaultValue::from_bool(true)).await.unwrap();
+        let mut user = DefaultValue::create();
+        user.set("name", Value::from_str("Ana García")).await.unwrap();
+        user.set("age", Value::from_number(28.0).unwrap()).await.unwrap();
+        user.set("active", Value::from_bool(true)).await.unwrap();
 
         // When: Verificar propiedades existentes y no existentes
         let has_name = user.has_property("name").await.unwrap();
@@ -35,9 +36,9 @@ async fn test_has_property_error_cases() {
 
     local_set.run_until(async {
         // Given: Valores no-objeto
-        let string_value = DefaultValue::from_str("not an object");
-        let number_value = DefaultValue::from_number(42.0).unwrap();
-        let array_value = DefaultValue::new_array();
+        let string_value = Value::from_str("not an object");
+        let number_value = Value::from_number(42.0).unwrap();
+        let array_value = Value::new_array();
 
         // When: Intentar verificar propiedades en valores no-objeto
         let string_result = string_value.has_property("key").await;
@@ -59,12 +60,12 @@ async fn test_get_property_type_basic() {
 
     local_set.run_until(async {
         // Given: Objeto con diferentes tipos de propiedades
-        let mut data = DefaultValue::new_object();
-        data.set("string_prop", DefaultValue::from_str("test")).await.unwrap();
-        data.set("number_prop", DefaultValue::from_number(123.45).unwrap()).await.unwrap();
-        data.set("bool_prop", DefaultValue::from_bool(false)).await.unwrap();
-        data.set("object_prop", DefaultValue::new_object()).await.unwrap();
-        data.set("array_prop", DefaultValue::new_array()).await.unwrap();
+        let mut data = DefaultValue::create();
+        data.set("string_prop", Value::from_str("test")).await.unwrap();
+        data.set("number_prop", Value::from_number(123.45).unwrap()).await.unwrap();
+        data.set("bool_prop", Value::from_bool(false)).await.unwrap();
+        data.set("object_prop", Value::new_object()).await.unwrap();
+        data.set("array_prop", Value::new_array()).await.unwrap();
 
         // When: Obtener tipos de propiedades
         let string_type = data.get_property_type("string_prop").await.unwrap();
@@ -92,12 +93,12 @@ async fn test_get_property_names_basic() {
 
     local_set.run_until(async {
         // Given: Objeto con múltiples propiedades
-        let mut employee = DefaultValue::new_object();
-        employee.set("name", DefaultValue::from_str("Carlos Mendoza")).await.unwrap();
-        employee.set("department", DefaultValue::from_str("Engineering")).await.unwrap();
-        employee.set("salary", DefaultValue::from_number(75000.0).unwrap()).await.unwrap();
-        employee.set("remote", DefaultValue::from_bool(true)).await.unwrap();
-        employee.set("start_date", DefaultValue::from_str("2023-01-15")).await.unwrap();
+        let mut employee = DefaultValue::create();
+        employee.set("name", Value::from_str("Carlos Mendoza")).await.unwrap();
+        employee.set("department", Value::from_str("Engineering")).await.unwrap();
+        employee.set("salary", Value::from_number(75000.0).unwrap()).await.unwrap();
+        employee.set("remote", Value::from_bool(true)).await.unwrap();
+        employee.set("start_date", Value::from_str("2023-01-15")).await.unwrap();
 
         // When: Obtener nombres de propiedades
         let property_names = employee.get_property_names().await.unwrap();
@@ -109,7 +110,7 @@ async fn test_get_property_names_basic() {
         assert!(property_names.contains(&"salary".to_string()));
         assert!(property_names.contains(&"remote".to_string()));
         assert!(property_names.contains(&"start_date".to_string()));
-        
+
         let expected_order = vec!["department", "name", "remote", "salary", "start_date"];
         assert_eq!(property_names, expected_order);
 
@@ -123,7 +124,7 @@ async fn test_get_property_names_empty_object() {
 
     local_set.run_until(async {
         // Given: Objeto vacío
-        let empty_object = DefaultValue::new_object();
+        let empty_object = DefaultValue::create();
 
         // When: Obtener nombres de propiedades
         let property_names = empty_object.get_property_names().await.unwrap();
@@ -142,19 +143,19 @@ async fn test_count_properties_basic() {
 
     local_set.run_until(async {
         // Given: Objeto con diferentes cantidades de propiedades
-        let mut small_object = DefaultValue::new_object();
-        small_object.set("prop1", DefaultValue::from_str("value1")).await.unwrap();
-        small_object.set("prop2", DefaultValue::from_str("value2")).await.unwrap();
+        let mut small_object = DefaultValue::create();
+        small_object.set("prop1", Value::from_str("value1")).await.unwrap();
+        small_object.set("prop2", Value::from_str("value2")).await.unwrap();
 
-        let mut large_object = DefaultValue::new_object();
+        let mut large_object = DefaultValue::create();
         for i in 0..100 {
             large_object.set(
                 &format!("property_{}", i),
-                DefaultValue::from_number(i as f64).unwrap()
+                Value::from_number(i as f64).unwrap()
             ).await.unwrap();
         }
 
-        let empty_object = DefaultValue::new_object();
+        let empty_object = DefaultValue::create();
 
         // When: Contar propiedades
         let small_count = small_object.count_properties().await.unwrap();
@@ -176,10 +177,10 @@ async fn test_introspection_error_cases() {
 
     local_set.run_until(async {
         // Given: Valores que no son objetos
-        let string_val = DefaultValue::from_str("not an object");
-        let number_val = DefaultValue::from_number(42.0).unwrap();
-        let bool_val = DefaultValue::from_bool(true);
-        let array_val = DefaultValue::new_array();
+        let string_val = Value::from_str("not an object");
+        let number_val = Value::from_number(42.0).unwrap();
+        let bool_val = Value::from_bool(true);
+        let array_val = Value::new_array();
 
         let test_values = vec![string_val, number_val, bool_val, array_val];
 
@@ -210,18 +211,18 @@ async fn test_introspection_with_nested_objects() {
 
     local_set.run_until(async {
         // Given: Objeto con estructura anidada
-        let mut root = DefaultValue::new_object();
-        root.set("id", DefaultValue::from_number(1.0).unwrap()).await.unwrap();
-        root.set("name", DefaultValue::from_str("Root Object")).await.unwrap();
+        let mut root = DefaultValue::create();
+        root.set("id", Value::from_number(1.0).unwrap()).await.unwrap();
+        root.set("name", Value::from_str("Root Object")).await.unwrap();
 
-        let mut nested = DefaultValue::new_object();
-        nested.set("nested_prop", DefaultValue::from_str("nested_value")).await.unwrap();
-        nested.set("nested_number", DefaultValue::from_number(99.9).unwrap()).await.unwrap();
+        let mut nested = Value::new_object();
+        nested.set("nested_prop", Value::from_str("nested_value")).await.unwrap();
+        nested.set("nested_number", Value::from_number(99.9).unwrap()).await.unwrap();
         root.set("nested", nested).await.unwrap();
 
-        let mut array = DefaultValue::new_array();
-        array.push(DefaultValue::from_str("item1")).await.unwrap();
-        array.push(DefaultValue::from_str("item2")).await.unwrap();
+        let mut array = Value::new_array();
+        array.push(Value::from_str("item1")).await.unwrap();
+        array.push(Value::from_str("item2")).await.unwrap();
         root.set("items", array).await.unwrap();
 
         // When: Introspección en objeto raíz
@@ -255,11 +256,11 @@ async fn test_introspection_performance() {
 
     local_set.run_until(async {
         // Given: Objeto grande para test de performance
-        let mut large_object = DefaultValue::new_object();
+        let mut large_object = DefaultValue::create();
         for i in 0..10000 {
             large_object.set(
                 &format!("prop_{:04}", i),
-                DefaultValue::from_str(&format!("value_{}", i))
+                Value::from_str(&format!("value_{}", i))
             ).await.unwrap();
         }
 
@@ -317,17 +318,17 @@ async fn test_introspection_with_model_manager() {
 
     local_set.run_until(async {
         // Given: Model manager con datos empresariales
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
-        let mut company = DefaultValue::new_object();
-        company.set("name", DefaultValue::from_str("TechCorp")).await.unwrap();
-        company.set("founded", DefaultValue::from_number(2020.0).unwrap()).await.unwrap();
-        company.set("active", DefaultValue::from_bool(true)).await.unwrap();
+        let mut company = DefaultValue::create();
+        company.set("name", Value::from_str("TechCorp")).await.unwrap();
+        company.set("founded", Value::from_number(2020.0).unwrap()).await.unwrap();
+        company.set("active", Value::from_bool(true)).await.unwrap();
 
-        let mut address = DefaultValue::new_object();
-        address.set("street", DefaultValue::from_str("123 Tech Street")).await.unwrap();
-        address.set("city", DefaultValue::from_str("San Francisco")).await.unwrap();
-        address.set("country", DefaultValue::from_str("USA")).await.unwrap();
+        let mut address = Value::new_object();
+        address.set("street", Value::from_str("123 Tech Street")).await.unwrap();
+        address.set("city", Value::from_str("San Francisco")).await.unwrap();
+        address.set("country", Value::from_str("USA")).await.unwrap();
         company.set("address", address).await.unwrap();
 
         manager.insert(
@@ -374,38 +375,38 @@ async fn test_introspection_comprehensive_scenario() {
 
     local_set.run_until(async {
         // Given: Escenario empresarial complejo
-        let mut employee = DefaultValue::new_object();
-        employee.set("id", DefaultValue::from_number(12345.0).unwrap()).await.unwrap();
-        employee.set("name", DefaultValue::from_str("María González")).await.unwrap();
-        employee.set("email", DefaultValue::from_str("maria@techcorp.com")).await.unwrap();
-        employee.set("active", DefaultValue::from_bool(true)).await.unwrap();
+        let mut employee = DefaultValue::create();
+        employee.set("id", Value::from_number(12345.0).unwrap()).await.unwrap();
+        employee.set("name", Value::from_str("María González")).await.unwrap();
+        employee.set("email", Value::from_str("maria@techcorp.com")).await.unwrap();
+        employee.set("active", Value::from_bool(true)).await.unwrap();
 
-        let mut profile = DefaultValue::new_object();
-        profile.set("department", DefaultValue::from_str("Engineering")).await.unwrap();
-        profile.set("level", DefaultValue::from_number(8.0).unwrap()).await.unwrap();
-        profile.set("remote", DefaultValue::from_bool(true)).await.unwrap();
-        profile.set("start_date", DefaultValue::from_str("2022-03-15")).await.unwrap();
+        let mut profile = Value::new_object();
+        profile.set("department", Value::from_str("Engineering")).await.unwrap();
+        profile.set("level", Value::from_number(8.0).unwrap()).await.unwrap();
+        profile.set("remote", Value::from_bool(true)).await.unwrap();
+        profile.set("start_date", Value::from_str("2022-03-15")).await.unwrap();
         employee.set("profile", profile).await.unwrap();
 
-        let mut skills = DefaultValue::new_array();
-        skills.push(DefaultValue::from_str("Rust")).await.unwrap();
-        skills.push(DefaultValue::from_str("JavaScript")).await.unwrap();
-        skills.push(DefaultValue::from_str("Database Design")).await.unwrap();
+        let mut skills = Value::new_array();
+        skills.push(Value::from_str("Rust")).await.unwrap();
+        skills.push(Value::from_str("JavaScript")).await.unwrap();
+        skills.push(Value::from_str("Database Design")).await.unwrap();
         employee.set("skills", skills).await.unwrap();
 
-        let mut projects = DefaultValue::new_array();
+        let mut projects = Value::new_array();
         for i in 1..=3 {
-            let mut project = DefaultValue::new_object();
-            project.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            project.set("name", DefaultValue::from_str(&format!("Project {}", i))).await.unwrap();
-            project.set("status", DefaultValue::from_str("active")).await.unwrap();
+            let mut project = Value::new_object();
+            project.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            project.set("name", Value::from_str(&format!("Project {}", i))).await.unwrap();
+            project.set("status", Value::from_str("active")).await.unwrap();
             projects.push(project).await.unwrap();
         }
         employee.set("projects", projects).await.unwrap();
 
         // When: Análisis completo de introspección
         println!("=== COMPREHENSIVE INTROSPECTION ANALYSIS ===");
-        
+
         let top_level_props = employee.get_property_names().await.unwrap();
         let top_level_count = employee.count_properties().await.unwrap();
 
@@ -414,7 +415,7 @@ async fn test_introspection_comprehensive_scenario() {
             let prop_type = employee.get_property_type(prop).await.unwrap().unwrap();
             println!("  {}: {}", prop, prop_type);
         }
-        
+
         let profile_obj = employee.get("profile").await.unwrap().unwrap();
         let profile_props = profile_obj.get_property_names().await.unwrap();
         let profile_count = profile_obj.count_properties().await.unwrap();
@@ -438,7 +439,7 @@ async fn test_introspection_comprehensive_scenario() {
 
         assert_eq!(profile_count, 4); // department, level, remote, start_date
         assert_eq!(profile_props, vec!["department", "level", "remote", "start_date"]);
-        
+
         assert_eq!(employee.get_property_type("id").await.unwrap(), Some("Number".to_string()));
         assert_eq!(employee.get_property_type("name").await.unwrap(), Some("String".to_string()));
         assert_eq!(employee.get_property_type("email").await.unwrap(), Some("String".to_string()));

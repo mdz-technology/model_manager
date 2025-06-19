@@ -14,9 +14,9 @@ impl ObjectIteratorFactory<SerdeDynamicValue> for DefaultObjectIteratorFactory {
     }
 }
 
-pub struct DefaultAsyncArrayIteratorFactory;
+pub struct DefaultArrayIteratorFactory;
 
-impl ArrayIteratorFactory<SerdeDynamicValue> for DefaultAsyncArrayIteratorFactory {
+impl ArrayIteratorFactory<SerdeDynamicValue> for DefaultArrayIteratorFactory {
     type ArrayIterator = SerdeArrayIterator;
 
     fn create_array_iterator(data: SerdeDynamicValue) -> Result<Self::ArrayIterator, String> {
@@ -35,6 +35,6 @@ impl IteratorFactory<SerdeDynamicValue> for DefaultIteratorFactory {
     }
 
     fn create_array_iterator(data: SerdeDynamicValue) -> Result<Self::ArrayIterator, String> {
-        DefaultAsyncArrayIteratorFactory::create_array_iterator(data)
+        DefaultArrayIteratorFactory::create_array_iterator(data)
     }
 }

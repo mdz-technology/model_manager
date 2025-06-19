@@ -313,12 +313,12 @@ impl SerdeDynamicValue {
                     }
                     Ok(())
                 }
-                
+
                 (Value::Array(self_arr), Value::Array(other_arr)) => {
                     self_arr.extend(other_arr.iter().cloned());
                     Ok(())
                 }
-                
+
                 _ => {
                     self.inner = other.inner.clone();
                     Ok(())
@@ -326,7 +326,7 @@ impl SerdeDynamicValue {
             }
         })
     }
-    
+
     fn calculate_hash_internal<'a>(
         &'a self,
     ) -> Pin<Box<dyn Future<Output = ModelResult<u64>> + Send + 'a>> {

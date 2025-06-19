@@ -1,8 +1,11 @@
-use model_manager::infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
 use model_manager::{
-    DefaultValue, DynamicValue, ModelError, ModelManager, ModelManagerFactory, ModelResult,
+    DefaultModelManager, DefaultValue, DynamicValue, DynamicValueFactory, ModelError, ModelManager,
+    ModelManagerFactory, ModelResult,
 };
 use tokio::task::LocalSet;
+
+type Value = <DefaultValue as DynamicValueFactory>::Value;
+type Manager = <DefaultModelManager as ModelManagerFactory<Value>>::Manager;
 
 #[tokio::test]
 async fn test_get_by_path_single_level() {
@@ -10,17 +13,13 @@ async fn test_get_by_path_single_level() {
 
     local_set
         .run_until(async {
-            // Given: Objeto con campos de primer nivel
-            let mut data = DefaultValue::new_object();
-            data.set("name", DefaultValue::from_str("John"))
+            // ✅ CAMBIO: Usar Value::new_object() en lugar de Value::new_object()
+            let mut data = Value::new_object();
+            data.set("name", Value::from_str("John")).await.unwrap();
+            data.set("age", Value::from_number(30.0).unwrap())
                 .await
                 .unwrap();
-            data.set("age", DefaultValue::from_number(30.0).unwrap())
-                .await
-                .unwrap();
-            data.set("active", DefaultValue::from_bool(true))
-                .await
-                .unwrap();
+            data.set("active", Value::from_bool(true)).await.unwrap();
 
             // When: Acceder por path de un nivel
             let name_result = data.get_by_path("name").await.unwrap();
@@ -46,13 +45,13 @@ async fn test_get_by_path_nested_levels() {
 
     local_set
         .run_until(async {
-            // Given: Estructura anidada de 3 niveles
-            let mut root = DefaultValue::new_object();
+            // ✅ CAMBIO: Usar Value en lugar de DefaultValue
+            let mut root = Value::new_object();
 
-            let mut level1 = DefaultValue::new_object();
-            let mut level2 = DefaultValue::new_object();
+            let mut level1 = Value::new_object();
+            let mut level2 = Value::new_object();
             level2
-                .set("value", DefaultValue::from_str("deep_value"))
+                .set("value", Value::from_str("deep_value"))
                 .await
                 .unwrap();
             level1.set("level2", level2).await.unwrap();
@@ -75,8 +74,8 @@ async fn test_get_by_path_nonexistent_paths() {
     local_set
         .run_until(async {
             // Given: Objeto simple
-            let mut data = DefaultValue::new_object();
-            data.set("existing", DefaultValue::from_str("value"))
+            let mut data = Value::new_object();
+            data.set("existing", Value::from_str("value"))
                 .await
                 .unwrap();
 
@@ -100,10 +99,8 @@ async fn test_get_by_path_empty_path() {
     local_set
         .run_until(async {
             // Given: Objeto con datos
-            let mut data = DefaultValue::new_object();
-            data.set("field", DefaultValue::from_str("value"))
-                .await
-                .unwrap();
+            let mut data = Value::new_object();
+            data.set("field", Value::from_str("value")).await.unwrap();
 
             // When: Path vacío
             let result = data.get_by_path("").await.unwrap();
@@ -127,14 +124,12 @@ async fn test_has_path_existing_paths() {
     local_set
         .run_until(async {
             // Given: Estructura con múltiples niveles
-            let mut root = DefaultValue::new_object();
-            root.set("simple", DefaultValue::from_str("value"))
-                .await
-                .unwrap();
+            let mut root = Value::new_object();
+            root.set("simple", Value::from_str("value")).await.unwrap();
 
-            let mut nested = DefaultValue::new_object();
+            let mut nested = Value::new_object();
             nested
-                .set("inner", DefaultValue::from_number(42.0).unwrap())
+                .set("inner", Value::from_number(42.0).unwrap())
                 .await
                 .unwrap();
             root.set("nested", nested).await.unwrap();
@@ -159,10 +154,8 @@ async fn test_has_path_nonexistent_paths() {
     local_set
         .run_until(async {
             // Given: Objeto simple
-            let mut data = DefaultValue::new_object();
-            data.set("exists", DefaultValue::from_str("value"))
-                .await
-                .unwrap();
+            let mut data = Value::new_object();
+            data.set("exists", Value::from_str("value")).await.unwrap();
 
             // When: Verificar paths que no existen
             let has_nonexistent = data.has_path("nonexistent").await.unwrap();
@@ -177,7 +170,6 @@ async fn test_has_path_nonexistent_paths() {
         .await;
 }
 
-
 #[tokio::test]
 async fn test_set_by_path_empty_path_error() {
     let local_set = LocalSet::new();
@@ -185,10 +177,10 @@ async fn test_set_by_path_empty_path_error() {
     local_set
         .run_until(async {
             // Given: Objeto cualquiera
-            let mut data = DefaultValue::new_object();
+            let mut data = Value::new_object();
 
             // When: Intentar establecer con path vacío
-            let result = data.set_by_path("", DefaultValue::from_str("value")).await;
+            let result = data.set_by_path("", Value::from_str("value")).await;
 
             // Then: Error retornado
             assert!(result.is_err());
@@ -208,26 +200,18 @@ async fn test_path_navigation_with_different_types() {
     local_set
         .run_until(async {
             // Given: Objeto con diferentes tipos de datos
-            let mut data = DefaultValue::new_object();
-            data.set("string_val", DefaultValue::from_str("text"))
+            let mut data = Value::new_object();
+            data.set("string_val", Value::from_str("text"))
                 .await
                 .unwrap();
-            data.set("number_val", DefaultValue::from_number(123.45).unwrap())
+            data.set("number_val", Value::from_number(123.45).unwrap())
                 .await
                 .unwrap();
-            data.set("bool_val", DefaultValue::from_bool(false))
-                .await
-                .unwrap();
+            data.set("bool_val", Value::from_bool(false)).await.unwrap();
 
-            let mut array_val = DefaultValue::new_array();
-            array_val
-                .push(DefaultValue::from_str("item1"))
-                .await
-                .unwrap();
-            array_val
-                .push(DefaultValue::from_str("item2"))
-                .await
-                .unwrap();
+            let mut array_val = Value::new_array();
+            array_val.push(Value::from_str("item1")).await.unwrap();
+            array_val.push(Value::from_str("item2")).await.unwrap();
             data.set("array_val", array_val).await.unwrap();
 
             // When: Acceder cada tipo por path
@@ -252,40 +236,40 @@ async fn test_path_navigation_max_depth_by_levels() {
     local_set
         .run_until(async {
             // ✅ CONSTRUCCIÓN CORRECTA: Crear estructura explícitamente
-            let mut root = DefaultValue::new_object();
+            let mut root = Value::new_object();
 
             // Crear cada nivel explícitamente
-            let mut level10 = DefaultValue::new_object();
+            let mut level10 = Value::new_object();
             level10
-                .set("bottom", DefaultValue::from_str("bottom"))
+                .set("bottom", Value::from_str("bottom"))
                 .await
                 .unwrap();
 
-            let mut level9 = DefaultValue::new_object();
+            let mut level9 = Value::new_object();
             level9.set("level10", level10).await.unwrap();
 
-            let mut level8 = DefaultValue::new_object();
+            let mut level8 = Value::new_object();
             level8.set("level9", level9).await.unwrap();
 
-            let mut level7 = DefaultValue::new_object();
+            let mut level7 = Value::new_object();
             level7.set("level8", level8).await.unwrap();
 
-            let mut level6 = DefaultValue::new_object();
+            let mut level6 = Value::new_object();
             level6.set("level7", level7).await.unwrap();
 
-            let mut level5 = DefaultValue::new_object();
+            let mut level5 = Value::new_object();
             level5.set("level6", level6).await.unwrap();
 
-            let mut level4 = DefaultValue::new_object();
+            let mut level4 = Value::new_object();
             level4.set("level5", level5).await.unwrap();
 
-            let mut level3 = DefaultValue::new_object();
+            let mut level3 = Value::new_object();
             level3.set("level4", level4).await.unwrap();
 
-            let mut level2 = DefaultValue::new_object();
+            let mut level2 = Value::new_object();
             level2.set("level3", level3).await.unwrap();
 
-            let mut level1 = DefaultValue::new_object();
+            let mut level1 = Value::new_object();
             level1.set("level2", level2).await.unwrap();
 
             root.set("level1", level1).await.unwrap();
@@ -313,9 +297,9 @@ async fn test_serde_dynamic_value_equals() {
     local_set
         .run_until(async {
             // Given: Dos valores idénticos
-            let value1 = DefaultValue::from_str("test_value");
-            let value2 = DefaultValue::from_str("test_value");
-            let value3 = DefaultValue::from_str("different_value");
+            let value1 = Value::from_str("test_value");
+            let value2 = Value::from_str("test_value");
+            let value3 = Value::from_str("different_value");
 
             // When: Comparar valores
             let are_equal = value1.equals(&value2).await.unwrap();
@@ -336,9 +320,9 @@ async fn test_serde_get_path_parts() {
     let complex_path = "user.profile.settings.theme";
 
     // When: Extraer partes del path
-    let simple_parts = DefaultValue::get_path_parts(simple_path);
-    let nested_parts = DefaultValue::get_path_parts(nested_path);
-    let complex_parts = DefaultValue::get_path_parts(complex_path);
+    let simple_parts = Value::get_path_parts(simple_path);
+    let nested_parts = Value::get_path_parts(nested_path);
+    let complex_parts = Value::get_path_parts(complex_path);
 
     // Then: Partes correctas extraídas
     assert_eq!(simple_parts, vec!["field"]);
@@ -357,12 +341,12 @@ async fn test_serde_is_valid_path() {
     let invalid_end_dot = "level1.";
 
     // When: Validar paths
-    let simple_valid = DefaultValue::is_valid_path(valid_simple);
-    let nested_valid = DefaultValue::is_valid_path(valid_nested);
-    let empty_invalid = DefaultValue::is_valid_path(invalid_empty);
-    let empty_part_invalid = DefaultValue::is_valid_path(invalid_empty_part);
-    let start_dot_invalid = DefaultValue::is_valid_path(invalid_start_dot);
-    let end_dot_invalid = DefaultValue::is_valid_path(invalid_end_dot);
+    let simple_valid = Value::is_valid_path(valid_simple);
+    let nested_valid = Value::is_valid_path(valid_nested);
+    let empty_invalid = Value::is_valid_path(invalid_empty);
+    let empty_part_invalid = Value::is_valid_path(invalid_empty_part);
+    let start_dot_invalid = Value::is_valid_path(invalid_start_dot);
+    let end_dot_invalid = Value::is_valid_path(invalid_end_dot);
 
     // Then: Validación correcta
     assert!(simple_valid);
@@ -384,17 +368,14 @@ async fn test_path_with_special_characters() {
     local_set
         .run_until(async {
             // Given: Objeto con campos que tienen caracteres especiales
-            let mut data = DefaultValue::new_object();
-            data.set("field-with-dash", DefaultValue::from_str("dash_value"))
+            let mut data = Value::new_object();
+            data.set("field-with-dash", Value::from_str("dash_value"))
                 .await
                 .unwrap();
-            data.set(
-                "field_with_underscore",
-                DefaultValue::from_str("underscore_value"),
-            )
-            .await
-            .unwrap();
-            data.set("field with spaces", DefaultValue::from_str("spaces_value"))
+            data.set("field_with_underscore", Value::from_str("underscore_value"))
+                .await
+                .unwrap();
+            data.set("field with spaces", Value::from_str("spaces_value"))
                 .await
                 .unwrap();
 
@@ -426,10 +407,10 @@ async fn test_path_navigation_through_array() {
     local_set
         .run_until(async {
             // Given: Estructura con array en el path
-            let mut root = DefaultValue::new_object();
+            let mut root = Value::new_object();
 
-            let mut array = DefaultValue::new_array();
-            array.push(DefaultValue::from_str("item")).await.unwrap();
+            let mut array = Value::new_array();
+            array.push(Value::from_str("item")).await.unwrap();
             root.set("array_field", array).await.unwrap();
 
             // When: Intentar navegar a través del array
@@ -449,8 +430,8 @@ async fn test_path_navigation_through_non_object() {
     local_set
         .run_until(async {
             // Given: Estructura donde intentamos navegar a través de un valor primitivo
-            let mut data = DefaultValue::new_object();
-            data.set("string_field", DefaultValue::from_str("just_a_string"))
+            let mut data = Value::new_object();
+            data.set("string_field", Value::from_str("just_a_string"))
                 .await
                 .unwrap();
 
@@ -470,14 +451,12 @@ async fn test_empty_values_in_path_navigation() {
     local_set
         .run_until(async {
             // Given: Objeto con valores vacíos
-            let mut data = DefaultValue::new_object();
-            data.set("empty_string", DefaultValue::from_str(""))
+            let mut data = Value::new_object();
+            data.set("empty_string", Value::from_str("")).await.unwrap();
+            data.set("zero_number", Value::from_number(0.0).unwrap())
                 .await
                 .unwrap();
-            data.set("zero_number", DefaultValue::from_number(0.0).unwrap())
-                .await
-                .unwrap();
-            data.set("false_bool", DefaultValue::from_bool(false))
+            data.set("false_bool", Value::from_bool(false))
                 .await
                 .unwrap();
 
@@ -520,11 +499,11 @@ async fn test_path_navigation_performance_simple() {
     local_set
         .run_until(async {
             // Given: Objeto simple para test de performance
-            let mut data = DefaultValue::new_object();
+            let mut data = Value::new_object();
             for i in 0..100 {
                 data.set(
                     &format!("field_{}", i),
-                    DefaultValue::from_number(i as f64).unwrap(),
+                    Value::from_number(i as f64).unwrap(),
                 )
                 .await
                 .unwrap();
@@ -557,14 +536,11 @@ async fn test_deep_path_performance() {
     local_set
         .run_until(async {
             // Given: Estructura profunda (20 niveles)
-            let mut current = DefaultValue::new_object();
-            current
-                .set("value", DefaultValue::from_str("deep"))
-                .await
-                .unwrap();
+            let mut current = Value::new_object();
+            current.set("value", Value::from_str("deep")).await.unwrap();
 
             for i in (1..=20).rev() {
-                let mut parent = DefaultValue::new_object();
+                let mut parent = Value::new_object();
                 parent.set(&format!("level{}", i), current).await.unwrap();
                 current = parent;
             }
@@ -607,17 +583,17 @@ async fn test_path_navigation_memory_safety() {
     local_set
         .run_until(async {
             // Given: Estructura que será clonada múltiples veces durante navegación
-            let mut data = DefaultValue::new_object();
+            let mut data = Value::new_object();
 
             // Crear estructura con contenido que se clonará durante navegación
             let large_string = "x".repeat(1000); // 1KB string
-            data.set("large_field", DefaultValue::from_str(&large_string))
+            data.set("large_field", Value::from_str(&large_string))
                 .await
                 .unwrap();
 
-            let mut nested = DefaultValue::new_object();
+            let mut nested = Value::new_object();
             nested
-                .set("inner_large", DefaultValue::from_str(&large_string))
+                .set("inner_large", Value::from_str(&large_string))
                 .await
                 .unwrap();
             data.set("nested", nested).await.unwrap();
@@ -669,7 +645,7 @@ async fn test_trait_contract_path_methods() {
             }
 
             // When: Usar la función con diferentes implementaciones del trait
-            let serde_value = DefaultValue::new_object();
+            let serde_value = Value::new_object();
             let result = test_path_contract(serde_value).await.unwrap();
 
             // Then: Contrato del trait respetado
@@ -683,316 +659,449 @@ async fn test_trait_contract_path_methods() {
 async fn test_set_by_path_simple() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Empty object
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Empty object
+            let mut data = Value::new_object();
 
-        // When: Set simple path
-        let result = data.set_by_path("name", DefaultValue::from_str("John Doe")).await;
+            // When: Set simple path
+            let result = data.set_by_path("name", Value::from_str("John Doe")).await;
 
-        // Then: Success and value is set
-        assert!(result.is_ok());
+            // Then: Success and value is set
+            assert!(result.is_ok());
 
-        let retrieved = data.get("name").await.unwrap().unwrap();
-        assert_eq!(retrieved.as_str().unwrap(), "John Doe");
+            let retrieved = data.get("name").await.unwrap().unwrap();
+            assert_eq!(retrieved.as_str().unwrap(), "John Doe");
 
-        println!("✅ Simple set_by_path test passed");
-    }).await;
+            println!("✅ Simple set_by_path test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_nested_creation() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Empty object
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Empty object
+            let mut data = Value::new_object();
 
-        // When: Set nested path that doesn't exist
-        let result = data.set_by_path("user.profile.name", DefaultValue::from_str("Jane Smith")).await;
+            // When: Set nested path that doesn't exist
+            let result = data
+                .set_by_path("user.profile.name", Value::from_str("Jane Smith"))
+                .await;
 
-        // Then: Success and nested structure is created
-        assert!(result.is_ok());
+            // Then: Success and nested structure is created
+            assert!(result.is_ok());
 
-        // Verify nested structure was created
-        let user = data.get("user").await.unwrap().unwrap();
-        assert!(user.is_object());
+            // Verify nested structure was created
+            let user = data.get("user").await.unwrap().unwrap();
+            assert!(user.is_object());
 
-        let profile = user.get("profile").await.unwrap().unwrap();
-        assert!(profile.is_object());
+            let profile = user.get("profile").await.unwrap().unwrap();
+            assert!(profile.is_object());
 
-        let name = profile.get("name").await.unwrap().unwrap();
-        assert_eq!(name.as_str().unwrap(), "Jane Smith");
+            let name = profile.get("name").await.unwrap().unwrap();
+            assert_eq!(name.as_str().unwrap(), "Jane Smith");
 
-        // Verify using get_by_path
-        let retrieved = data.get_by_path("user.profile.name").await.unwrap().unwrap();
-        assert_eq!(retrieved.as_str().unwrap(), "Jane Smith");
+            // Verify using get_by_path
+            let retrieved = data
+                .get_by_path("user.profile.name")
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(retrieved.as_str().unwrap(), "Jane Smith");
 
-        println!("✅ Nested creation test passed");
-    }).await;
+            println!("✅ Nested creation test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_deep_nesting() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Empty object
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Empty object
+            let mut data = Value::new_object();
 
-        // When: Set very deep nested path
-        let deep_path = "level1.level2.level3.level4.level5.value";
-        let result = data.set_by_path(deep_path, DefaultValue::from_str("deep_value")).await;
+            // When: Set very deep nested path
+            let deep_path = "level1.level2.level3.level4.level5.value";
+            let result = data
+                .set_by_path(deep_path, Value::from_str("deep_value"))
+                .await;
 
-        // Then: Success and deep structure is created
-        assert!(result.is_ok());
+            // Then: Success and deep structure is created
+            assert!(result.is_ok());
 
-        // Verify deep access works
-        let retrieved = data.get_by_path(deep_path).await.unwrap().unwrap();
-        assert_eq!(retrieved.as_str().unwrap(), "deep_value");
+            // Verify deep access works
+            let retrieved = data.get_by_path(deep_path).await.unwrap().unwrap();
+            assert_eq!(retrieved.as_str().unwrap(), "deep_value");
 
-        // Verify intermediate objects exist
-        assert!(data.has_path("level1").await.unwrap());
-        assert!(data.has_path("level1.level2").await.unwrap());
-        assert!(data.has_path("level1.level2.level3").await.unwrap());
-        assert!(data.has_path("level1.level2.level3.level4").await.unwrap());
-        assert!(data.has_path("level1.level2.level3.level4.level5").await.unwrap());
+            // Verify intermediate objects exist
+            assert!(data.has_path("level1").await.unwrap());
+            assert!(data.has_path("level1.level2").await.unwrap());
+            assert!(data.has_path("level1.level2.level3").await.unwrap());
+            assert!(data.has_path("level1.level2.level3.level4").await.unwrap());
+            assert!(data
+                .has_path("level1.level2.level3.level4.level5")
+                .await
+                .unwrap());
 
-        println!("✅ Deep nesting test passed");
-    }).await;
+            println!("✅ Deep nesting test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_overwrite_existing() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Object with existing nested structure
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Object with existing nested structure
+            let mut data = Value::new_object();
 
-        // Create initial structure
-        data.set_by_path("user.name", DefaultValue::from_str("Old Name")).await.unwrap();
-        data.set_by_path("user.age", DefaultValue::from_number(25.0).unwrap()).await.unwrap();
+            // Create initial structure
+            data.set_by_path("user.name", Value::from_str("Old Name"))
+                .await
+                .unwrap();
+            data.set_by_path("user.age", Value::from_number(25.0).unwrap())
+                .await
+                .unwrap();
 
-        // When: Overwrite existing value
-        let result = data.set_by_path("user.name", DefaultValue::from_str("New Name")).await;
+            // When: Overwrite existing value
+            let result = data
+                .set_by_path("user.name", Value::from_str("New Name"))
+                .await;
 
-        // Then: Success and value is updated
-        assert!(result.is_ok());
+            // Then: Success and value is updated
+            assert!(result.is_ok());
 
-        let name = data.get_by_path("user.name").await.unwrap().unwrap();
-        assert_eq!(name.as_str().unwrap(), "New Name");
+            let name = data.get_by_path("user.name").await.unwrap().unwrap();
+            assert_eq!(name.as_str().unwrap(), "New Name");
 
-        // Verify other values are preserved
-        let age = data.get_by_path("user.age").await.unwrap().unwrap();
-        assert_eq!(age.as_number().unwrap(), 25.0);
+            // Verify other values are preserved
+            let age = data.get_by_path("user.age").await.unwrap().unwrap();
+            assert_eq!(age.as_number().unwrap(), 25.0);
 
-        println!("✅ Overwrite existing test passed");
-    }).await;
+            println!("✅ Overwrite existing test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_replace_non_object() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Object with non-object value
-        let mut data = DefaultValue::new_object();
-        data.set("user", DefaultValue::from_str("not an object")).await.unwrap();
+    local_set
+        .run_until(async {
+            // Given: Object with non-object value
+            let mut data = Value::new_object();
+            data.set("user", Value::from_str("not an object"))
+                .await
+                .unwrap();
 
-        // When: Try to set nested path on non-object
-        let result = data.set_by_path("user.name", DefaultValue::from_str("John")).await;
+            // When: Try to set nested path on non-object
+            let result = data.set_by_path("user.name", Value::from_str("John")).await;
 
-        // Then: Success - non-object is replaced with object
-        assert!(result.is_ok());
+            // Then: Success - non-object is replaced with object
+            assert!(result.is_ok());
 
-        let user = data.get("user").await.unwrap().unwrap();
-        assert!(user.is_object());
+            let user = data.get("user").await.unwrap().unwrap();
+            assert!(user.is_object());
 
-        let name = user.get("name").await.unwrap().unwrap();
-        assert_eq!(name.as_str().unwrap(), "John");
+            let name = user.get("name").await.unwrap().unwrap();
+            assert_eq!(name.as_str().unwrap(), "John");
 
-        println!("✅ Replace non-object test passed");
-    }).await;
+            println!("✅ Replace non-object test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_different_data_types() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Empty object
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Empty object
+            let mut data = Value::new_object();
 
-        // When: Set different data types via paths
-        data.set_by_path("config.string_val", DefaultValue::from_str("test")).await.unwrap();
-        data.set_by_path("config.number_val", DefaultValue::from_number(42.5).unwrap()).await.unwrap();
-        data.set_by_path("config.bool_val", DefaultValue::from_bool(true)).await.unwrap();
+            // When: Set different data types via paths
+            data.set_by_path("config.string_val", Value::from_str("test"))
+                .await
+                .unwrap();
+            data.set_by_path("config.number_val", Value::from_number(42.5).unwrap())
+                .await
+                .unwrap();
+            data.set_by_path("config.bool_val", Value::from_bool(true))
+                .await
+                .unwrap();
 
-        // Then: All values are set correctly
-        let string_val = data.get_by_path("config.string_val").await.unwrap().unwrap();
-        assert_eq!(string_val.as_str().unwrap(), "test");
+            // Then: All values are set correctly
+            let string_val = data
+                .get_by_path("config.string_val")
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(string_val.as_str().unwrap(), "test");
 
-        let number_val = data.get_by_path("config.number_val").await.unwrap().unwrap();
-        assert_eq!(number_val.as_number().unwrap(), 42.5);
+            let number_val = data
+                .get_by_path("config.number_val")
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(number_val.as_number().unwrap(), 42.5);
 
-        let bool_val = data.get_by_path("config.bool_val").await.unwrap().unwrap();
-        assert_eq!(bool_val.as_bool().unwrap(), true);
+            let bool_val = data.get_by_path("config.bool_val").await.unwrap().unwrap();
+            assert_eq!(bool_val.as_bool().unwrap(), true);
 
-        println!("✅ Different data types test passed");
-    }).await;
+            println!("✅ Different data types test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_error_cases() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            let mut data = Value::new_object();
 
-        // Test empty path
-        let result = data.set_by_path("", DefaultValue::from_str("value")).await;
-        assert!(result.is_err());
-        if let Err(ModelError::InvalidData(msg)) = result {
-            assert!(msg.contains("Empty path"));
-        }
+            // Test empty path
+            let result = data.set_by_path("", Value::from_str("value")).await;
+            assert!(result.is_err());
+            if let Err(ModelError::InvalidData(msg)) = result {
+                assert!(msg.contains("Empty path"));
+            }
 
-        // Test invalid path with empty segments
-        let result = data.set_by_path("level1..level3", DefaultValue::from_str("value")).await;
-        assert!(result.is_err());
-        if let Err(ModelError::InvalidData(msg)) = result {
-            assert!(msg.contains("empty segment"));
-        }
+            // Test invalid path with empty segments
+            let result = data
+                .set_by_path("level1..level3", Value::from_str("value"))
+                .await;
+            assert!(result.is_err());
+            if let Err(ModelError::InvalidData(msg)) = result {
+                assert!(msg.contains("empty segment"));
+            }
 
-        // Test path starting with dot
-        let result = data.set_by_path(".level1", DefaultValue::from_str("value")).await;
-        assert!(result.is_err());
+            // Test path starting with dot
+            let result = data.set_by_path(".level1", Value::from_str("value")).await;
+            assert!(result.is_err());
 
-        // Test path ending with dot
-        let result = data.set_by_path("level1.", DefaultValue::from_str("value")).await;
-        assert!(result.is_err());
+            // Test path ending with dot
+            let result = data.set_by_path("level1.", Value::from_str("value")).await;
+            assert!(result.is_err());
 
-        // Test setting on non-object root
-        let mut non_object = DefaultValue::from_str("not an object");
-        let result = non_object.set_by_path("some.path", DefaultValue::from_str("value")).await;
-        assert!(result.is_err());
-        if let Err(ModelError::InvalidData(msg)) = result {
-            assert!(msg.contains("non-object root"));
-        }
+            // Test setting on non-object root
+            let mut non_object = Value::from_str("not an object");
+            let result = non_object
+                .set_by_path("some.path", Value::from_str("value"))
+                .await;
+            assert!(result.is_err());
+            if let Err(ModelError::InvalidData(msg)) = result {
+                assert!(msg.contains("non-object root"));
+            }
 
-        println!("✅ Error cases test passed");
-    }).await;
+            println!("✅ Error cases test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_complex_scenario() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Complex enterprise data structure
-        let mut company = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Complex enterprise data structure
+            let mut company = Value::new_object();
 
-        // When: Build complex structure using set_by_path
-        company.set_by_path("info.name", DefaultValue::from_str("TechCorp Inc")).await.unwrap();
-        company.set_by_path("info.founded", DefaultValue::from_number(2020.0).unwrap()).await.unwrap();
+            // When: Build complex structure using set_by_path
+            company
+                .set_by_path("info.name", Value::from_str("TechCorp Inc"))
+                .await
+                .unwrap();
+            company
+                .set_by_path("info.founded", Value::from_number(2020.0).unwrap())
+                .await
+                .unwrap();
 
-        company.set_by_path("departments.engineering.head", DefaultValue::from_str("Alice Johnson")).await.unwrap();
-        company.set_by_path("departments.engineering.budget", DefaultValue::from_number(500000.0).unwrap()).await.unwrap();
+            company
+                .set_by_path(
+                    "departments.engineering.head",
+                    Value::from_str("Alice Johnson"),
+                )
+                .await
+                .unwrap();
+            company
+                .set_by_path(
+                    "departments.engineering.budget",
+                    Value::from_number(500000.0).unwrap(),
+                )
+                .await
+                .unwrap();
 
-        company.set_by_path("departments.sales.head", DefaultValue::from_str("Bob Smith")).await.unwrap();
-        company.set_by_path("departments.sales.budget", DefaultValue::from_number(300000.0).unwrap()).await.unwrap();
+            company
+                .set_by_path("departments.sales.head", Value::from_str("Bob Smith"))
+                .await
+                .unwrap();
+            company
+                .set_by_path(
+                    "departments.sales.budget",
+                    Value::from_number(300000.0).unwrap(),
+                )
+                .await
+                .unwrap();
 
-        company.set_by_path("locations.headquarters.city", DefaultValue::from_str("San Francisco")).await.unwrap();
-        company.set_by_path("locations.headquarters.country", DefaultValue::from_str("USA")).await.unwrap();
+            company
+                .set_by_path(
+                    "locations.headquarters.city",
+                    Value::from_str("San Francisco"),
+                )
+                .await
+                .unwrap();
+            company
+                .set_by_path("locations.headquarters.country", Value::from_str("USA"))
+                .await
+                .unwrap();
 
-        company.set_by_path("locations.branch_office.city", DefaultValue::from_str("London")).await.unwrap();
-        company.set_by_path("locations.branch_office.country", DefaultValue::from_str("UK")).await.unwrap();
+            company
+                .set_by_path("locations.branch_office.city", Value::from_str("London"))
+                .await
+                .unwrap();
+            company
+                .set_by_path("locations.branch_office.country", Value::from_str("UK"))
+                .await
+                .unwrap();
 
-        // Then: All data is accessible via get_by_path
-        assert_eq!(
-            company.get_by_path("info.name").await.unwrap().unwrap().as_str().unwrap(),
-            "TechCorp Inc"
-        );
-        assert_eq!(
-            company.get_by_path("departments.engineering.head").await.unwrap().unwrap().as_str().unwrap(),
-            "Alice Johnson"
-        );
-        assert_eq!(
-            company.get_by_path("departments.sales.budget").await.unwrap().unwrap().as_number().unwrap(),
-            300000.0
-        );
-        assert_eq!(
-            company.get_by_path("locations.headquarters.city").await.unwrap().unwrap().as_str().unwrap(),
-            "San Francisco"
-        );
+            // Then: All data is accessible via get_by_path
+            assert_eq!(
+                company
+                    .get_by_path("info.name")
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "TechCorp Inc"
+            );
+            assert_eq!(
+                company
+                    .get_by_path("departments.engineering.head")
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Alice Johnson"
+            );
+            assert_eq!(
+                company
+                    .get_by_path("departments.sales.budget")
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .as_number()
+                    .unwrap(),
+                300000.0
+            );
+            assert_eq!(
+                company
+                    .get_by_path("locations.headquarters.city")
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "San Francisco"
+            );
 
-        // Verify structure integrity
-        assert!(company.has_path("info").await.unwrap());
-        assert!(company.has_path("departments").await.unwrap());
-        assert!(company.has_path("departments.engineering").await.unwrap());
-        assert!(company.has_path("departments.sales").await.unwrap());
-        assert!(company.has_path("locations").await.unwrap());
-        assert!(company.has_path("locations.headquarters").await.unwrap());
-        assert!(company.has_path("locations.branch_office").await.unwrap());
+            // Verify structure integrity
+            assert!(company.has_path("info").await.unwrap());
+            assert!(company.has_path("departments").await.unwrap());
+            assert!(company.has_path("departments.engineering").await.unwrap());
+            assert!(company.has_path("departments.sales").await.unwrap());
+            assert!(company.has_path("locations").await.unwrap());
+            assert!(company.has_path("locations.headquarters").await.unwrap());
+            assert!(company.has_path("locations.branch_office").await.unwrap());
 
-        println!("✅ Complex scenario test passed");
-        println!("   Created enterprise structure with {} top-level sections", 3);
-    }).await;
+            println!("✅ Complex scenario test passed");
+            println!(
+                "   Created enterprise structure with {} top-level sections",
+                3
+            );
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_whitespace_handling() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Object with whitespace in paths
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Object with whitespace in paths
+            let mut data = Value::new_object();
 
-        // When: Set paths with various whitespace scenarios
-        data.set_by_path("  user.name  ", DefaultValue::from_str("trimmed")).await.unwrap();
+            // When: Set paths with various whitespace scenarios
+            data.set_by_path("  user.name  ", Value::from_str("trimmed"))
+                .await
+                .unwrap();
 
-        // Then: Whitespace is handled correctly
-        let retrieved = data.get_by_path("user.name").await.unwrap().unwrap();
-        assert_eq!(retrieved.as_str().unwrap(), "trimmed");
+            // Then: Whitespace is handled correctly
+            let retrieved = data.get_by_path("user.name").await.unwrap().unwrap();
+            assert_eq!(retrieved.as_str().unwrap(), "trimmed");
 
-        // Verify normalized path works
-        let retrieved2 = data.get_by_path("user.name").await.unwrap().unwrap();
-        assert_eq!(retrieved2.as_str().unwrap(), "trimmed");
+            // Verify normalized path works
+            let retrieved2 = data.get_by_path("user.name").await.unwrap().unwrap();
+            assert_eq!(retrieved2.as_str().unwrap(), "trimmed");
 
-        println!("✅ Whitespace handling test passed");
-    }).await;
+            println!("✅ Whitespace handling test passed");
+        })
+        .await;
 }
 
 #[tokio::test]
 async fn test_set_by_path_performance() {
     let local_set = LocalSet::new();
 
-    local_set.run_until(async {
-        // Given: Performance test with many nested paths
-        let mut data = DefaultValue::new_object();
+    local_set
+        .run_until(async {
+            // Given: Performance test with many nested paths
+            let mut data = Value::new_object();
 
-        let start = std::time::Instant::now();
+            let start = std::time::Instant::now();
 
-        // When: Set many nested paths
-        for i in 0..100 {
-            let path = format!("level1.level2.level3.item_{}", i);
-            data.set_by_path(&path, DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-        }
+            // When: Set many nested paths
+            for i in 0..100 {
+                let path = format!("level1.level2.level3.item_{}", i);
+                data.set_by_path(&path, Value::from_number(i as f64).unwrap())
+                    .await
+                    .unwrap();
+            }
 
-        let duration = start.elapsed();
+            let duration = start.elapsed();
 
-        // Then: Performance is acceptable
-        assert!(duration.as_millis() < 1000); // Should complete in < 1 second
+            // Then: Performance is acceptable
+            assert!(duration.as_millis() < 1000); // Should complete in < 1 second
 
-        // Verify all paths were set correctly
-        for i in 0..100 {
-            let path = format!("level1.level2.level3.item_{}", i);
-            let value = data.get_by_path(&path).await.unwrap().unwrap();
-            assert_eq!(value.as_number().unwrap(), i as f64);
-        }
+            // Verify all paths were set correctly
+            for i in 0..100 {
+                let path = format!("level1.level2.level3.item_{}", i);
+                let value = data.get_by_path(&path).await.unwrap().unwrap();
+                assert_eq!(value.as_number().unwrap(), i as f64);
+            }
 
-        println!("✅ Performance test passed: {} operations in {:?}", 100, duration);
-    }).await;
+            println!(
+                "✅ Performance test passed: {} operations in {:?}",
+                100, duration
+            );
+        })
+        .await;
 }
 
 // ================================================================================
@@ -1005,33 +1114,30 @@ async fn test_model_manager_get_by_path_simple() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert user with nested data
-            let mut user = DefaultValue::new_object();
-            user.set("name", DefaultValue::from_str("Ana García"))
+            let mut user = Value::new_object();
+            user.set("name", Value::from_str("Ana García"))
                 .await
                 .unwrap();
-            user.set("email", DefaultValue::from_str("ana@empresa.com"))
+            user.set("email", Value::from_str("ana@empresa.com"))
                 .await
                 .unwrap();
-            user.set("age", DefaultValue::from_number(28.0).unwrap())
+            user.set("age", Value::from_number(28.0).unwrap())
                 .await
                 .unwrap();
 
-            let mut profile = DefaultValue::new_object();
+            let mut profile = Value::new_object();
             profile
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
             profile
-                .set("level", DefaultValue::from_number(5.0).unwrap())
+                .set("level", Value::from_number(5.0).unwrap())
                 .await
                 .unwrap();
-            profile
-                .set("active", DefaultValue::from_bool(true))
-                .await
-                .unwrap();
+            profile.set("active", Value::from_bool(true)).await.unwrap();
             user.set("profile", profile).await.unwrap();
 
             // Insert user
@@ -1089,11 +1195,11 @@ async fn test_model_manager_get_by_path_nonexistent_paths() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert simple user
-            let mut user = DefaultValue::new_object();
-            user.set("name", DefaultValue::from_str("Test User"))
+            let mut user = Value::new_object();
+            user.set("name", Value::from_str("Test User"))
                 .await
                 .unwrap();
             manager
@@ -1135,7 +1241,7 @@ async fn test_model_manager_get_by_path_nonexistent_record() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // When: Try to get path from nonexistent record
             let result = manager
@@ -1165,20 +1271,17 @@ async fn test_model_manager_find_by_path_exists_basic() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert multiple users with different structures
-            let mut user1 = DefaultValue::new_object();
+            let mut user1 = Value::new_object();
+            user1.set("name", Value::from_str("User 1")).await.unwrap();
             user1
-                .set("name", DefaultValue::from_str("User 1"))
+                .set("email", Value::from_str("user1@test.com"))
                 .await
                 .unwrap();
             user1
-                .set("email", DefaultValue::from_str("user1@test.com"))
-                .await
-                .unwrap();
-            user1
-                .set("phone", DefaultValue::from_str("123-456-7890"))
+                .set("phone", Value::from_str("123-456-7890"))
                 .await
                 .unwrap();
             manager
@@ -1186,13 +1289,10 @@ async fn test_model_manager_find_by_path_exists_basic() {
                 .await
                 .unwrap();
 
-            let mut user2 = DefaultValue::new_object();
+            let mut user2 = Value::new_object();
+            user2.set("name", Value::from_str("User 2")).await.unwrap();
             user2
-                .set("name", DefaultValue::from_str("User 2"))
-                .await
-                .unwrap();
-            user2
-                .set("email", DefaultValue::from_str("user2@test.com"))
+                .set("email", Value::from_str("user2@test.com"))
                 .await
                 .unwrap();
             // No phone field
@@ -1201,13 +1301,10 @@ async fn test_model_manager_find_by_path_exists_basic() {
                 .await
                 .unwrap();
 
-            let mut user3 = DefaultValue::new_object();
+            let mut user3 = Value::new_object();
+            user3.set("name", Value::from_str("User 3")).await.unwrap();
             user3
-                .set("name", DefaultValue::from_str("User 3"))
-                .await
-                .unwrap();
-            user3
-                .set("phone", DefaultValue::from_str("098-765-4321"))
+                .set("phone", Value::from_str("098-765-4321"))
                 .await
                 .unwrap();
             // No email field
@@ -1258,22 +1355,19 @@ async fn test_model_manager_find_by_path_exists_nested() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert users with nested profile data
-            let mut user1 = DefaultValue::new_object();
-            user1
-                .set("name", DefaultValue::from_str("User 1"))
-                .await
-                .unwrap();
+            let mut user1 = Value::new_object();
+            user1.set("name", Value::from_str("User 1")).await.unwrap();
 
-            let mut profile1 = DefaultValue::new_object();
+            let mut profile1 = Value::new_object();
             profile1
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
             profile1
-                .set("level", DefaultValue::from_number(5.0).unwrap())
+                .set("level", Value::from_number(5.0).unwrap())
                 .await
                 .unwrap();
             user1.set("profile", profile1).await.unwrap();
@@ -1283,15 +1377,12 @@ async fn test_model_manager_find_by_path_exists_nested() {
                 .await
                 .unwrap();
 
-            let mut user2 = DefaultValue::new_object();
-            user2
-                .set("name", DefaultValue::from_str("User 2"))
-                .await
-                .unwrap();
+            let mut user2 = Value::new_object();
+            user2.set("name", Value::from_str("User 2")).await.unwrap();
 
-            let mut profile2 = DefaultValue::new_object();
+            let mut profile2 = Value::new_object();
             profile2
-                .set("department", DefaultValue::from_str("Sales"))
+                .set("department", Value::from_str("Sales"))
                 .await
                 .unwrap();
             // No level field
@@ -1302,11 +1393,8 @@ async fn test_model_manager_find_by_path_exists_nested() {
                 .await
                 .unwrap();
 
-            let mut user3 = DefaultValue::new_object();
-            user3
-                .set("name", DefaultValue::from_str("User 3"))
-                .await
-                .unwrap();
+            let mut user3 = Value::new_object();
+            user3.set("name", Value::from_str("User 3")).await.unwrap();
             // No profile at all
             manager
                 .insert("users".to_string(), None, user3)
@@ -1345,58 +1433,40 @@ async fn test_model_manager_find_by_path_value_basic() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert users with different departments
-            let mut user1 = DefaultValue::new_object();
+            let mut user1 = Value::new_object();
+            user1.set("name", Value::from_str("Ana")).await.unwrap();
             user1
-                .set("name", DefaultValue::from_str("Ana"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
-            user1
-                .set("department", DefaultValue::from_str("Engineering"))
-                .await
-                .unwrap();
-            user1
-                .set("active", DefaultValue::from_bool(true))
-                .await
-                .unwrap();
+            user1.set("active", Value::from_bool(true)).await.unwrap();
             manager
                 .insert("users".to_string(), None, user1)
                 .await
                 .unwrap();
 
-            let mut user2 = DefaultValue::new_object();
+            let mut user2 = Value::new_object();
+            user2.set("name", Value::from_str("Carlos")).await.unwrap();
             user2
-                .set("name", DefaultValue::from_str("Carlos"))
+                .set("department", Value::from_str("Sales"))
                 .await
                 .unwrap();
-            user2
-                .set("department", DefaultValue::from_str("Sales"))
-                .await
-                .unwrap();
-            user2
-                .set("active", DefaultValue::from_bool(true))
-                .await
-                .unwrap();
+            user2.set("active", Value::from_bool(true)).await.unwrap();
             manager
                 .insert("users".to_string(), None, user2)
                 .await
                 .unwrap();
 
-            let mut user3 = DefaultValue::new_object();
+            let mut user3 = Value::new_object();
+            user3.set("name", Value::from_str("Maria")).await.unwrap();
             user3
-                .set("name", DefaultValue::from_str("Maria"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
-            user3
-                .set("department", DefaultValue::from_str("Engineering"))
-                .await
-                .unwrap();
-            user3
-                .set("active", DefaultValue::from_bool(false))
-                .await
-                .unwrap();
+            user3.set("active", Value::from_bool(false)).await.unwrap();
             manager
                 .insert("users".to_string(), None, user3)
                 .await
@@ -1407,7 +1477,7 @@ async fn test_model_manager_find_by_path_value_basic() {
                 .find_by_path_value(
                     "users".to_string(),
                     "department".to_string(),
-                    DefaultValue::from_str("Engineering"),
+                    Value::from_str("Engineering"),
                 )
                 .await
                 .unwrap();
@@ -1416,7 +1486,7 @@ async fn test_model_manager_find_by_path_value_basic() {
                 .find_by_path_value(
                     "users".to_string(),
                     "department".to_string(),
-                    DefaultValue::from_str("Sales"),
+                    Value::from_str("Sales"),
                 )
                 .await
                 .unwrap();
@@ -1425,7 +1495,7 @@ async fn test_model_manager_find_by_path_value_basic() {
                 .find_by_path_value(
                     "users".to_string(),
                     "active".to_string(),
-                    DefaultValue::from_bool(true),
+                    Value::from_bool(true),
                 )
                 .await
                 .unwrap();
@@ -1434,7 +1504,7 @@ async fn test_model_manager_find_by_path_value_basic() {
                 .find_by_path_value(
                     "users".to_string(),
                     "active".to_string(),
-                    DefaultValue::from_bool(false),
+                    Value::from_bool(false),
                 )
                 .await
                 .unwrap();
@@ -1468,26 +1538,26 @@ async fn test_model_manager_find_by_path_value_nested() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert users with nested profile data
-            let mut user1 = DefaultValue::new_object();
+            let mut user1 = Value::new_object();
             user1
-                .set("name", DefaultValue::from_str("Senior Dev"))
+                .set("name", Value::from_str("Senior Dev"))
                 .await
                 .unwrap();
 
-            let mut profile1 = DefaultValue::new_object();
+            let mut profile1 = Value::new_object();
             profile1
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
             profile1
-                .set("level", DefaultValue::from_number(8.0).unwrap())
+                .set("level", Value::from_number(8.0).unwrap())
                 .await
                 .unwrap();
             profile1
-                .set("remote", DefaultValue::from_bool(true))
+                .set("remote", Value::from_bool(true))
                 .await
                 .unwrap();
             user1.set("profile", profile1).await.unwrap();
@@ -1497,23 +1567,23 @@ async fn test_model_manager_find_by_path_value_nested() {
                 .await
                 .unwrap();
 
-            let mut user2 = DefaultValue::new_object();
+            let mut user2 = Value::new_object();
             user2
-                .set("name", DefaultValue::from_str("Junior Dev"))
+                .set("name", Value::from_str("Junior Dev"))
                 .await
                 .unwrap();
 
-            let mut profile2 = DefaultValue::new_object();
+            let mut profile2 = Value::new_object();
             profile2
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
             profile2
-                .set("level", DefaultValue::from_number(3.0).unwrap())
+                .set("level", Value::from_number(3.0).unwrap())
                 .await
                 .unwrap();
             profile2
-                .set("remote", DefaultValue::from_bool(false))
+                .set("remote", Value::from_bool(false))
                 .await
                 .unwrap();
             user2.set("profile", profile2).await.unwrap();
@@ -1523,23 +1593,23 @@ async fn test_model_manager_find_by_path_value_nested() {
                 .await
                 .unwrap();
 
-            let mut user3 = DefaultValue::new_object();
+            let mut user3 = Value::new_object();
             user3
-                .set("name", DefaultValue::from_str("Sales Manager"))
+                .set("name", Value::from_str("Sales Manager"))
                 .await
                 .unwrap();
 
-            let mut profile3 = DefaultValue::new_object();
+            let mut profile3 = Value::new_object();
             profile3
-                .set("department", DefaultValue::from_str("Sales"))
+                .set("department", Value::from_str("Sales"))
                 .await
                 .unwrap();
             profile3
-                .set("level", DefaultValue::from_number(7.0).unwrap())
+                .set("level", Value::from_number(7.0).unwrap())
                 .await
                 .unwrap();
             profile3
-                .set("remote", DefaultValue::from_bool(true))
+                .set("remote", Value::from_bool(true))
                 .await
                 .unwrap();
             user3.set("profile", profile3).await.unwrap();
@@ -1554,7 +1624,7 @@ async fn test_model_manager_find_by_path_value_nested() {
                 .find_by_path_value(
                     "users".to_string(),
                     "profile.department".to_string(),
-                    DefaultValue::from_str("Engineering"),
+                    Value::from_str("Engineering"),
                 )
                 .await
                 .unwrap();
@@ -1563,7 +1633,7 @@ async fn test_model_manager_find_by_path_value_nested() {
                 .find_by_path_value(
                     "users".to_string(),
                     "profile.remote".to_string(),
-                    DefaultValue::from_bool(true),
+                    Value::from_bool(true),
                 )
                 .await
                 .unwrap();
@@ -1572,7 +1642,7 @@ async fn test_model_manager_find_by_path_value_nested() {
                 .find_by_path_value(
                     "users".to_string(),
                     "profile.level".to_string(),
-                    DefaultValue::from_number(8.0).unwrap(),
+                    Value::from_number(8.0).unwrap(),
                 )
                 .await
                 .unwrap();
@@ -1612,12 +1682,12 @@ async fn test_model_manager_find_by_path_value_no_matches() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert users
-            let mut user1 = DefaultValue::new_object();
+            let mut user1 = Value::new_object();
             user1
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
             manager
@@ -1625,9 +1695,9 @@ async fn test_model_manager_find_by_path_value_no_matches() {
                 .await
                 .unwrap();
 
-            let mut user2 = DefaultValue::new_object();
+            let mut user2 = Value::new_object();
             user2
-                .set("department", DefaultValue::from_str("Sales"))
+                .set("department", Value::from_str("Sales"))
                 .await
                 .unwrap();
             manager
@@ -1640,7 +1710,7 @@ async fn test_model_manager_find_by_path_value_no_matches() {
                 .find_by_path_value(
                     "users".to_string(),
                     "department".to_string(),
-                    DefaultValue::from_str("Marketing"),
+                    Value::from_str("Marketing"),
                 )
                 .await
                 .unwrap();
@@ -1649,7 +1719,7 @@ async fn test_model_manager_find_by_path_value_no_matches() {
                 .find_by_path_value(
                     "users".to_string(),
                     "nonexistent_field".to_string(),
-                    DefaultValue::from_str("any_value"),
+                    Value::from_str("any_value"),
                 )
                 .await
                 .unwrap();
@@ -1669,32 +1739,26 @@ async fn test_model_manager_path_methods_with_different_data_types() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert record with various data types
-            let mut record = DefaultValue::new_object();
+            let mut record = Value::new_object();
             record
-                .set("string_field", DefaultValue::from_str("test_string"))
+                .set("string_field", Value::from_str("test_string"))
                 .await
                 .unwrap();
             record
-                .set("number_field", DefaultValue::from_number(42.5).unwrap())
+                .set("number_field", Value::from_number(42.5).unwrap())
                 .await
                 .unwrap();
             record
-                .set("bool_field", DefaultValue::from_bool(true))
+                .set("bool_field", Value::from_bool(true))
                 .await
                 .unwrap();
 
-            let mut array_field = DefaultValue::new_array();
-            array_field
-                .push(DefaultValue::from_str("item1"))
-                .await
-                .unwrap();
-            array_field
-                .push(DefaultValue::from_str("item2"))
-                .await
-                .unwrap();
+            let mut array_field = Value::new_array();
+            array_field.push(Value::from_str("item1")).await.unwrap();
+            array_field.push(Value::from_str("item2")).await.unwrap();
             record.set("array_field", array_field).await.unwrap();
 
             manager
@@ -1735,7 +1799,7 @@ async fn test_model_manager_path_methods_with_different_data_types() {
                 .find_by_path_value(
                     "records".to_string(),
                     "string_field".to_string(),
-                    DefaultValue::from_str("test_string"),
+                    Value::from_str("test_string"),
                 )
                 .await
                 .unwrap();
@@ -1744,7 +1808,7 @@ async fn test_model_manager_path_methods_with_different_data_types() {
                 .find_by_path_value(
                     "records".to_string(),
                     "number_field".to_string(),
-                    DefaultValue::from_number(42.5).unwrap(),
+                    Value::from_number(42.5).unwrap(),
                 )
                 .await
                 .unwrap();
@@ -1753,7 +1817,7 @@ async fn test_model_manager_path_methods_with_different_data_types() {
                 .find_by_path_value(
                     "records".to_string(),
                     "bool_field".to_string(),
-                    DefaultValue::from_bool(true),
+                    Value::from_bool(true),
                 )
                 .await
                 .unwrap();
@@ -1783,17 +1847,17 @@ async fn test_model_manager_path_methods_performance() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Insert many records for performance testing
             for i in 0..100 {
-                let mut user = DefaultValue::new_object();
-                user.set("name", DefaultValue::from_str(&format!("User {}", i)))
+                let mut user = Value::new_object();
+                user.set("name", Value::from_str(&format!("User {}", i)))
                     .await
                     .unwrap();
                 user.set(
                     "department",
-                    DefaultValue::from_str(match i % 3 {
+                    Value::from_str(match i % 3 {
                         0 => "Engineering",
                         1 => "Sales",
                         2 => "Marketing",
@@ -1802,12 +1866,9 @@ async fn test_model_manager_path_methods_performance() {
                 )
                 .await
                 .unwrap();
-                user.set(
-                    "level",
-                    DefaultValue::from_number((i % 10 + 1) as f64).unwrap(),
-                )
-                .await
-                .unwrap();
+                user.set("level", Value::from_number((i % 10 + 1) as f64).unwrap())
+                    .await
+                    .unwrap();
 
                 manager
                     .insert("users".to_string(), None, user)
@@ -1829,7 +1890,7 @@ async fn test_model_manager_path_methods_performance() {
                 .find_by_path_value(
                     "users".to_string(),
                     "department".to_string(),
-                    DefaultValue::from_str("Engineering"),
+                    Value::from_str("Engineering"),
                 )
                 .await
                 .unwrap();
@@ -1860,7 +1921,7 @@ async fn test_model_manager_path_methods_empty_model() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // When: Test path operations on empty model
             let exists_results = manager
@@ -1872,7 +1933,7 @@ async fn test_model_manager_path_methods_empty_model() {
                 .find_by_path_value(
                     "empty_model".to_string(),
                     "any_field".to_string(),
-                    DefaultValue::from_str("any_value"),
+                    Value::from_str("any_value"),
                 )
                 .await
                 .unwrap();
@@ -1892,27 +1953,27 @@ async fn test_model_manager_path_methods_complex_scenario() {
 
     local_set
         .run_until(async {
-            let mut manager = DefaultModelManagerFactory::create();
+            let mut manager = DefaultModelManager::create();
 
             // Given: Complex scenario with employees and projects
-            let mut employee1 = DefaultValue::new_object();
+            let mut employee1 = Value::new_object();
             employee1
-                .set("name", DefaultValue::from_str("Alice"))
+                .set("name", Value::from_str("Alice"))
                 .await
                 .unwrap();
             employee1
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
 
-            let mut projects1 = DefaultValue::new_array();
-            let mut project1 = DefaultValue::new_object();
+            let mut projects1 = Value::new_array();
+            let mut project1 = Value::new_object();
             project1
-                .set("name", DefaultValue::from_str("Project Alpha"))
+                .set("name", Value::from_str("Project Alpha"))
                 .await
                 .unwrap();
             project1
-                .set("status", DefaultValue::from_str("active"))
+                .set("status", Value::from_str("active"))
                 .await
                 .unwrap();
             projects1.push(project1).await.unwrap();
@@ -1927,13 +1988,10 @@ async fn test_model_manager_path_methods_complex_scenario() {
                 .await
                 .unwrap();
 
-            let mut employee2 = DefaultValue::new_object();
+            let mut employee2 = Value::new_object();
+            employee2.set("name", Value::from_str("Bob")).await.unwrap();
             employee2
-                .set("name", DefaultValue::from_str("Bob"))
-                .await
-                .unwrap();
-            employee2
-                .set("department", DefaultValue::from_str("Sales"))
+                .set("department", Value::from_str("Sales"))
                 .await
                 .unwrap();
             // No projects
@@ -1946,24 +2004,24 @@ async fn test_model_manager_path_methods_complex_scenario() {
                 .await
                 .unwrap();
 
-            let mut employee3 = DefaultValue::new_object();
+            let mut employee3 = Value::new_object();
             employee3
-                .set("name", DefaultValue::from_str("Charlie"))
+                .set("name", Value::from_str("Charlie"))
                 .await
                 .unwrap();
             employee3
-                .set("department", DefaultValue::from_str("Engineering"))
+                .set("department", Value::from_str("Engineering"))
                 .await
                 .unwrap();
 
-            let mut projects3 = DefaultValue::new_array();
-            let mut project3 = DefaultValue::new_object();
+            let mut projects3 = Value::new_array();
+            let mut project3 = Value::new_object();
             project3
-                .set("name", DefaultValue::from_str("Project Beta"))
+                .set("name", Value::from_str("Project Beta"))
                 .await
                 .unwrap();
             project3
-                .set("status", DefaultValue::from_str("completed"))
+                .set("status", Value::from_str("completed"))
                 .await
                 .unwrap();
             projects3.push(project3).await.unwrap();
@@ -1983,7 +2041,7 @@ async fn test_model_manager_path_methods_complex_scenario() {
                 .find_by_path_value(
                     "employees".to_string(),
                     "department".to_string(),
-                    DefaultValue::from_str("Engineering"),
+                    Value::from_str("Engineering"),
                 )
                 .await
                 .unwrap();

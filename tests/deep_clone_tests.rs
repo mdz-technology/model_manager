@@ -1,7 +1,8 @@
 use tokio::task::LocalSet;
-use model_manager::{DefaultValue, DynamicValue, ModelManager, ModelManagerFactory};
-use model_manager::infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
+use model_manager::{DefaultModelManager, DefaultValue, DynamicValue, DynamicValueFactory, ModelManager, ModelManagerFactory};
 use std::time::Instant;
+
+type Value = <DefaultValue as DynamicValueFactory>::Value;
 
 #[tokio::test]
 async fn test_deep_clone_basic_object() {
@@ -9,10 +10,10 @@ async fn test_deep_clone_basic_object() {
 
     local_set.run_until(async {
         // Given: Objeto básico
-        let mut original = DefaultValue::new_object();
-        original.set("name", DefaultValue::from_str("Test User")).await.unwrap();
-        original.set("age", DefaultValue::from_number(25.0).unwrap()).await.unwrap();
-        original.set("active", DefaultValue::from_bool(true)).await.unwrap();
+        let mut original = DefaultValue::create();
+        original.set("name", Value::from_str("Test User")).await.unwrap();
+        original.set("age", Value::from_number(25.0).unwrap()).await.unwrap();
+        original.set("active", Value::from_bool(true)).await.unwrap();
 
         // When: Realizar deep clone
         let cloned = original.deep_clone().await.unwrap();
@@ -35,10 +36,10 @@ async fn test_deep_clone_basic_array() {
 
     local_set.run_until(async {
         // Given: Array básico
-        let mut original = DefaultValue::new_array();
-        original.push(DefaultValue::from_str("item1")).await.unwrap();
-        original.push(DefaultValue::from_number(42.0).unwrap()).await.unwrap();
-        original.push(DefaultValue::from_bool(true)).await.unwrap();
+        let mut original = Value::new_array();
+        original.push(Value::from_str("item1")).await.unwrap();
+        original.push(Value::from_number(42.0).unwrap()).await.unwrap();
+        original.push(Value::from_bool(true)).await.unwrap();
 
         // When: Realizar deep clone
         let cloned = original.deep_clone().await.unwrap();
@@ -62,9 +63,9 @@ async fn test_deep_clone_primitive_values() {
 
     local_set.run_until(async {
         // Given: Valores primitivos
-        let string_val = DefaultValue::from_str("test string");
-        let number_val = DefaultValue::from_number(123.45).unwrap();
-        let bool_val = DefaultValue::from_bool(false);
+        let string_val = Value::from_str("test string");
+        let number_val = Value::from_number(123.45).unwrap();
+        let bool_val = Value::from_bool(false);
 
         // When: Realizar deep clone
         let cloned_string = string_val.deep_clone().await.unwrap();
@@ -86,25 +87,25 @@ async fn test_deep_clone_nested_structure() {
 
     local_set.run_until(async {
         // Given: Estructura anidada compleja
-        let mut original = DefaultValue::new_object();
-        original.set("title", DefaultValue::from_str("Root Document")).await.unwrap();
+        let mut original = DefaultValue::create();
+        original.set("title", Value::from_str("Root Document")).await.unwrap();
 
-        let mut user = DefaultValue::new_object();
-        user.set("name", DefaultValue::from_str("Ana García")).await.unwrap();
-        user.set("email", DefaultValue::from_str("ana@empresa.com")).await.unwrap();
+        let mut user = Value::new_object();
+        user.set("name", Value::from_str("Ana García")).await.unwrap();
+        user.set("email", Value::from_str("ana@empresa.com")).await.unwrap();
 
-        let mut profile = DefaultValue::new_object();
-        profile.set("department", DefaultValue::from_str("Engineering")).await.unwrap();
-        profile.set("level", DefaultValue::from_number(8.0).unwrap()).await.unwrap();
-        profile.set("remote", DefaultValue::from_bool(true)).await.unwrap();
+        let mut profile = Value::new_object();
+        profile.set("department", Value::from_str("Engineering")).await.unwrap();
+        profile.set("level", Value::from_number(8.0).unwrap()).await.unwrap();
+        profile.set("remote", Value::from_bool(true)).await.unwrap();
         user.set("profile", profile).await.unwrap();
 
-        let mut projects = DefaultValue::new_array();
+        let mut projects = Value::new_array();
         for i in 1..=5 {
-            let mut project = DefaultValue::new_object();
-            project.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            project.set("name", DefaultValue::from_str(&format!("Project {}", i))).await.unwrap();
-            project.set("active", DefaultValue::from_bool(i % 2 == 0)).await.unwrap();
+            let mut project = Value::new_object();
+            project.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            project.set("name", Value::from_str(&format!("Project {}", i))).await.unwrap();
+            project.set("active", Value::from_bool(i % 2 == 0)).await.unwrap();
             projects.push(project).await.unwrap();
         }
         user.set("projects", projects).await.unwrap();
@@ -161,21 +162,21 @@ async fn test_deep_clone_independence() {
 
     local_set.run_until(async {
         // Given: Objeto original
-        let mut original = DefaultValue::new_object();
-        original.set("shared_field", DefaultValue::from_str("original value")).await.unwrap();
+        let mut original = DefaultValue::create();
+        original.set("shared_field", Value::from_str("original value")).await.unwrap();
 
-        let mut nested = DefaultValue::new_object();
-        nested.set("inner_field", DefaultValue::from_str("inner original")).await.unwrap();
+        let mut nested = Value::new_object();
+        nested.set("inner_field", Value::from_str("inner original")).await.unwrap();
         original.set("nested", nested).await.unwrap();
 
         // When: Realizar deep clone y modificar original
         let cloned = original.deep_clone().await.unwrap();
 
-        original.set("shared_field", DefaultValue::from_str("MODIFIED")).await.unwrap();
-        original.set("new_field", DefaultValue::from_str("added after clone")).await.unwrap();
+        original.set("shared_field", Value::from_str("MODIFIED")).await.unwrap();
+        original.set("new_field", Value::from_str("added after clone")).await.unwrap();
 
         let mut modified_nested = original.get("nested").await.unwrap().unwrap();
-        modified_nested.set("inner_field", DefaultValue::from_str("MODIFIED INNER")).await.unwrap();
+        modified_nested.set("inner_field", Value::from_str("MODIFIED INNER")).await.unwrap();
         original.set("nested", modified_nested).await.unwrap();
 
         // Then: El clone no debe haber cambiado
@@ -206,24 +207,24 @@ async fn test_deep_clone_large_dataset() {
 
     local_set.run_until(async {
         // Given: Dataset grande para probar optimización
-        let mut large_object = DefaultValue::new_object();
-        large_object.set("metadata", DefaultValue::from_str("Large Dataset Test")).await.unwrap();
+        let mut large_object = DefaultValue::create();
+        large_object.set("metadata", Value::from_str("Large Dataset Test")).await.unwrap();
 
-        let mut records = DefaultValue::new_array();
+        let mut records = Value::new_array();
         for i in 0..5000 {
-            let mut record = DefaultValue::new_object();
-            record.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            record.set("name", DefaultValue::from_str(&format!("Record {}", i))).await.unwrap();
-            record.set("description", DefaultValue::from_str(&format!("Description for record {} with additional text to make it larger", i))).await.unwrap();
-            record.set("active", DefaultValue::from_bool(i % 2 == 0)).await.unwrap();
-            record.set("score", DefaultValue::from_number((i * 3) as f64).unwrap()).await.unwrap();
+            let mut record = Value::new_object();
+            record.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            record.set("name", Value::from_str(&format!("Record {}", i))).await.unwrap();
+            record.set("description", Value::from_str(&format!("Description for record {} with additional text to make it larger", i))).await.unwrap();
+            record.set("active", Value::from_bool(i % 2 == 0)).await.unwrap();
+            record.set("score", Value::from_number((i * 3) as f64).unwrap()).await.unwrap();
 
             // Agregar sub-objeto para cada record
-            let mut details = DefaultValue::new_object();
-            details.set("category", DefaultValue::from_str(match i % 4 {
+            let mut details = Value::new_object();
+            details.set("category", Value::from_str(match i % 4 {
                 0 => "A", 1 => "B", 2 => "C", _ => "D"
             })).await.unwrap();
-            details.set("priority", DefaultValue::from_number((i % 10) as f64).unwrap()).await.unwrap();
+            details.set("priority", Value::from_number((i % 10) as f64).unwrap()).await.unwrap();
             record.set("details", details).await.unwrap();
 
             records.push(record).await.unwrap();
@@ -281,9 +282,9 @@ async fn test_deep_clone_performance_threshold() {
 
     local_set.run_until(async {
         // Given: Estructura pequeña (debe usar clone normal)
-        let mut small_object = DefaultValue::new_object();
-        small_object.set("field1", DefaultValue::from_str("value1")).await.unwrap();
-        small_object.set("field2", DefaultValue::from_number(123.0).unwrap()).await.unwrap();
+        let mut small_object = DefaultValue::create();
+        small_object.set("field1", Value::from_str("value1")).await.unwrap();
+        small_object.set("field2", Value::from_number(123.0).unwrap()).await.unwrap();
 
         // When: Clone estructura pequeña
         let start = Instant::now();
@@ -291,14 +292,14 @@ async fn test_deep_clone_performance_threshold() {
         let small_duration = start.elapsed();
 
         // Given: Estructura mediana (debe usar streaming)
-        let mut medium_object = DefaultValue::new_object();
-        let mut medium_array = DefaultValue::new_array();
+        let mut medium_object = DefaultValue::create();
+        let mut medium_array = Value::new_array();
 
         for i in 0..2000 {
-            let mut item = DefaultValue::new_object();
-            item.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
+            let mut item = Value::new_object();
+            item.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
             // String grande para superar threshold
-            item.set("large_field", DefaultValue::from_str(&"x".repeat(1000))).await.unwrap();
+            item.set("large_field", Value::from_str(&"x".repeat(1000))).await.unwrap();
             medium_array.push(item).await.unwrap();
         }
         medium_object.set("data", medium_array).await.unwrap();
@@ -327,31 +328,31 @@ async fn test_deep_clone_with_model_manager() {
 
     local_set.run_until(async {
         // Given: Model manager con datos complejos
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         let unique_id = format!("tech_corp_{}", std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos());
 
-        let mut company = DefaultValue::new_object();
-        company.set("name", DefaultValue::from_str("TechCorp")).await.unwrap();
-        company.set("id", DefaultValue::from_str(&unique_id)).await.unwrap();
+        let mut company = DefaultValue::create();
+        company.set("name", Value::from_str("TechCorp")).await.unwrap();
+        company.set("id", Value::from_str(&unique_id)).await.unwrap();
 
-        let mut employees = DefaultValue::new_array();
+        let mut employees = Value::new_array();
         for i in 1..=20 { // Reducido para performance en tests masivos
-            let mut employee = DefaultValue::new_object();
-            employee.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            employee.set("name", DefaultValue::from_str(&format!("Employee {}", i))).await.unwrap();
-            employee.set("department", DefaultValue::from_str(match i % 3 {
+            let mut employee = Value::new_object();
+            employee.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            employee.set("name", Value::from_str(&format!("Employee {}", i))).await.unwrap();
+            employee.set("department", Value::from_str(match i % 3 {
                 0 => "Engineering",
                 1 => "Sales",
                 _ => "Marketing"
             })).await.unwrap();
 
-            let mut profile = DefaultValue::new_object();
-            profile.set("level", DefaultValue::from_number((i % 10) as f64).unwrap()).await.unwrap();
-            profile.set("remote", DefaultValue::from_bool(i % 2 == 0)).await.unwrap();
+            let mut profile = Value::new_object();
+            profile.set("level", Value::from_number((i % 10) as f64).unwrap()).await.unwrap();
+            profile.set("remote", Value::from_bool(i % 2 == 0)).await.unwrap();
             employee.set("profile", profile).await.unwrap();
 
             employees.push(employee).await.unwrap();
@@ -417,31 +418,31 @@ async fn test_deep_clone_edge_cases() {
 
     local_set.run_until(async {
         // Test Case 1: Objeto vacío
-        let empty_object = DefaultValue::new_object();
+        let empty_object = DefaultValue::create();
         let cloned_empty = empty_object.deep_clone().await.unwrap();
         assert!(cloned_empty.is_object());
         assert!(cloned_empty.is_empty());
 
         // Test Case 2: Array vacío
-        let empty_array = DefaultValue::new_array();
+        let empty_array = Value::new_array();
         let cloned_empty_array = empty_array.deep_clone().await.unwrap();
         assert!(cloned_empty_array.is_array());
         assert!(cloned_empty_array.is_empty());
 
         // Test Case 3: Estructura muy anidada (20 niveles)
-        let mut deeply_nested = DefaultValue::new_object();
-        let mut current = DefaultValue::new_object();
-        current.set("value", DefaultValue::from_str("deep")).await.unwrap();
+        let mut deeply_nested = DefaultValue::create();
+        let mut current = Value::new_object();
+        current.set("value", Value::from_str("deep")).await.unwrap();
 
         for i in (1..=20).rev() {
-            let mut parent = DefaultValue::new_object();
+            let mut parent = Value::new_object();
             parent.set(&format!("level{}", i), current).await.unwrap();
             current = parent;
         }
         deeply_nested.set("root", current).await.unwrap();
 
         let cloned_deep = deeply_nested.deep_clone().await.unwrap();
-        
+
         let deep_path = (1..=20).map(|i| format!("level{}", i)).collect::<Vec<_>>().join(".");
         let full_path = format!("root.{}.value", deep_path);
 
@@ -451,13 +452,13 @@ async fn test_deep_clone_edge_cases() {
         );
 
         // Test Case 4: Array con tipos mixtos
-        let mut mixed_array = DefaultValue::new_array();
-        mixed_array.push(DefaultValue::from_str("string")).await.unwrap();
-        mixed_array.push(DefaultValue::from_number(42.0).unwrap()).await.unwrap();
-        mixed_array.push(DefaultValue::from_bool(true)).await.unwrap();
+        let mut mixed_array = Value::new_array();
+        mixed_array.push(Value::from_str("string")).await.unwrap();
+        mixed_array.push(Value::from_number(42.0).unwrap()).await.unwrap();
+        mixed_array.push(Value::from_bool(true)).await.unwrap();
 
-        let mut nested_obj = DefaultValue::new_object();
-        nested_obj.set("nested", DefaultValue::from_str("value")).await.unwrap();
+        let mut nested_obj = Value::new_object();
+        nested_obj.set("nested", Value::from_str("value")).await.unwrap();
         mixed_array.push(nested_obj).await.unwrap();
 
         let cloned_mixed = mixed_array.deep_clone().await.unwrap();
@@ -482,22 +483,22 @@ async fn test_deep_clone_memory_efficiency() {
 
     local_set.run_until(async {
         // Given: Crear estructura que simule uso intensivo de memoria
-        let mut memory_test = DefaultValue::new_object();
-        memory_test.set("metadata", DefaultValue::from_str("Memory efficiency test")).await.unwrap();
-        
+        let mut memory_test = DefaultValue::create();
+        memory_test.set("metadata", Value::from_str("Memory efficiency test")).await.unwrap();
+
         for array_idx in 0..5 {
-            let mut large_array = DefaultValue::new_array();
+            let mut large_array = Value::new_array();
 
             for i in 0..1000 {
-                let mut item = DefaultValue::new_object();
-                item.set("array_id", DefaultValue::from_number(array_idx as f64).unwrap()).await.unwrap();
-                item.set("item_id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-                item.set("data", DefaultValue::from_str(&format!("Data for array {} item {}", array_idx, i))).await.unwrap();
+                let mut item = Value::new_object();
+                item.set("array_id", Value::from_number(array_idx as f64).unwrap()).await.unwrap();
+                item.set("item_id", Value::from_number(i as f64).unwrap()).await.unwrap();
+                item.set("data", Value::from_str(&format!("Data for array {} item {}", array_idx, i))).await.unwrap();
 
                 // Sub-estructura para cada item
-                let mut sub_data = DefaultValue::new_object();
-                sub_data.set("timestamp", DefaultValue::from_str("2025-01-15T10:00:00Z")).await.unwrap();
-                sub_data.set("processed", DefaultValue::from_bool(i % 2 == 0)).await.unwrap();
+                let mut sub_data = Value::new_object();
+                sub_data.set("timestamp", Value::from_str("2025-01-15T10:00:00Z")).await.unwrap();
+                sub_data.set("processed", Value::from_bool(i % 2 == 0)).await.unwrap();
                 item.set("metadata", sub_data).await.unwrap();
 
                 large_array.push(item).await.unwrap();
@@ -516,7 +517,7 @@ async fn test_deep_clone_memory_efficiency() {
         // Then: Verificar eficiencia y correctitud
         println!("Memory efficiency test completed in: {:?}", duration);
         assert!(duration.as_millis() < 10000); // Max 10 segundos
-        
+
         for array_idx in 0..5 {
             let original_array = memory_test.get(&format!("array_{}", array_idx)).await.unwrap().unwrap();
             let cloned_array = cloned.get(&format!("array_{}", array_idx)).await.unwrap().unwrap();
@@ -546,14 +547,14 @@ async fn test_deep_clone_concurrent_safety() {
 
     local_set.run_until(async {
         // Given: Estructura que será clonada múltiples veces concurrentemente
-        let mut shared_data = DefaultValue::new_object();
-        shared_data.set("shared_field", DefaultValue::from_str("shared value")).await.unwrap();
+        let mut shared_data = DefaultValue::create();
+        shared_data.set("shared_field", Value::from_str("shared value")).await.unwrap();
 
-        let mut array_data = DefaultValue::new_array();
+        let mut array_data = Value::new_array();
         for i in 0..100 {
-            let mut item = DefaultValue::new_object();
-            item.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            item.set("value", DefaultValue::from_str(&format!("value {}", i))).await.unwrap();
+            let mut item = Value::new_object();
+            item.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            item.set("value", Value::from_str(&format!("value {}", i))).await.unwrap();
             array_data.push(item).await.unwrap();
         }
         shared_data.set("array", array_data).await.unwrap();

@@ -1,24 +1,29 @@
 use tokio::task::LocalSet;
 use std::time::Instant;
-use model_manager::{DynamicValue, ModelManager, DefaultValue, ModelManagerFactory};
-use model_manager::infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
+use model_manager::{
+    DynamicValue, ModelManager, DefaultValue, ModelManagerFactory,
+    DynamicValueFactory, DefaultModelManager
+};
+
+type Value = <DefaultValue as DynamicValueFactory>::Value;
+type Manager = <DefaultModelManager as ModelManagerFactory<Value>>::Manager;
 
 #[tokio::test]
 async fn test_performance_single_operations() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== PERFORMANCE TEST: Single Operations ===");
 
         // Test INSERT performance
         let mut insert_times = Vec::new();
         for i in 0..1000 {
-            let mut data = DefaultValue::new_object();
-            data.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            data.set("name", DefaultValue::from_str(&format!("User {}", i))).await.unwrap();
-            data.set("email", DefaultValue::from_str(&format!("user{}@test.com", i))).await.unwrap();
+            let mut data = Value::new_object();
+            data.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            data.set("name", Value::from_str(&format!("User {}", i))).await.unwrap();
+            data.set("email", Value::from_str(&format!("user{}@test.com", i))).await.unwrap();
 
             let start = Instant::now();
             let result = manager.insert("perf_users".to_string(), None, data).await;
@@ -63,17 +68,17 @@ async fn test_performance_bulk_operations() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== PERFORMANCE TEST: Bulk Operations ===");
 
         // Test bulk insert performance
         let start = Instant::now();
         for i in 0..10000 {
-            let mut data = DefaultValue::new_object();
-            data.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            data.set("name", DefaultValue::from_str(&format!("BulkUser {}", i))).await.unwrap();
-            data.set("category", DefaultValue::from_str(match i % 5 {
+            let mut data = Value::new_object();
+            data.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            data.set("name", Value::from_str(&format!("BulkUser {}", i))).await.unwrap();
+            data.set("category", Value::from_str(match i % 5 {
                 0 => "A",
                 1 => "B",
                 2 => "C",
@@ -115,7 +120,7 @@ async fn test_performance_multiple_models() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== PERFORMANCE TEST: Multiple Models ===");
 
@@ -126,11 +131,11 @@ async fn test_performance_multiple_models() {
 
         for (model_idx, model_name) in models.iter().enumerate() {
             for i in 0..operations_per_model {
-                let mut data = DefaultValue::new_object();
-                data.set("model_id", DefaultValue::from_number(model_idx as f64).unwrap()).await.unwrap();
-                data.set("record_id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-                data.set("name", DefaultValue::from_str(&format!("{}_record_{}", model_name, i))).await.unwrap();
-                data.set("timestamp", DefaultValue::from_number(std::time::SystemTime::now()
+                let mut data = Value::new_object();
+                data.set("model_id", Value::from_number(model_idx as f64).unwrap()).await.unwrap();
+                data.set("record_id", Value::from_number(i as f64).unwrap()).await.unwrap();
+                data.set("name", Value::from_str(&format!("{}_record_{}", model_name, i))).await.unwrap();
+                data.set("timestamp", Value::from_number(std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis() as f64).unwrap()).await.unwrap();
@@ -174,7 +179,7 @@ async fn test_performance_complex_data_structures() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== PERFORMANCE TEST: Complex Data Structures ===");
 
@@ -182,20 +187,20 @@ async fn test_performance_complex_data_structures() {
 
         for i in 0..1000 {
             // Create complex nested structure
-            let mut complex_data = DefaultValue::new_object();
-            complex_data.set("id", DefaultValue::from_number(i as f64)?).await?;
-            complex_data.set("title", DefaultValue::from_str(&format!("Complex Record {}", i))).await?;
+            let mut complex_data = Value::new_object();
+            complex_data.set("id", Value::from_number(i as f64)?).await?;
+            complex_data.set("title", Value::from_str(&format!("Complex Record {}", i))).await?;
 
             // Nested user object
-            let mut user = DefaultValue::new_object();
-            user.set("name", DefaultValue::from_str(&format!("User {}", i))).await?;
-            user.set("email", DefaultValue::from_str(&format!("user{}@complex.com", i))).await?;
-            user.set("active", DefaultValue::from_bool(i % 2 == 0)).await?;
+            let mut user = Value::new_object();
+            user.set("name", Value::from_str(&format!("User {}", i))).await?;
+            user.set("email", Value::from_str(&format!("user{}@complex.com", i))).await?;
+            user.set("active", Value::from_bool(i % 2 == 0)).await?;
 
             // Profile object
-            let mut profile = DefaultValue::new_object();
-            profile.set("age", DefaultValue::from_number(20.0 + (i % 50) as f64)?).await?;
-            profile.set("department", DefaultValue::from_str(match i % 4 {
+            let mut profile = Value::new_object();
+            profile.set("age", Value::from_number(20.0 + (i % 50) as f64)?).await?;
+            profile.set("department", Value::from_str(match i % 4 {
                 0 => "Engineering",
                 1 => "Sales",
                 2 => "Marketing",
@@ -207,30 +212,30 @@ async fn test_performance_complex_data_structures() {
             complex_data.set("user", user).await?;
 
             // Array of items
-            let mut items = DefaultValue::new_array();
+            let mut items = Value::new_array();
             for j in 0..10 {
-                let mut item = DefaultValue::new_object();
-                item.set("item_id", DefaultValue::from_number(j as f64)?).await?;
-                item.set("value", DefaultValue::from_str(&format!("Item {}-{}", i, j))).await?;
-                item.set("price", DefaultValue::from_number(10.0 + j as f64)?).await?;
+                let mut item = Value::new_object();
+                item.set("item_id", Value::from_number(j as f64)?).await?;
+                item.set("value", Value::from_str(&format!("Item {}-{}", i, j))).await?;
+                item.set("price", Value::from_number(10.0 + j as f64)?).await?;
                 items.push(item).await?;
             }
             complex_data.set("items", items).await?;
 
             // Metadata
-            let mut metadata = DefaultValue::new_object();
-            metadata.set("created_at", DefaultValue::from_number(
+            let mut metadata = Value::new_object();
+            metadata.set("created_at", Value::from_number(
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis() as f64
             )?).await?;
-            metadata.set("version", DefaultValue::from_number(1.0)?).await?;
+            metadata.set("version", Value::from_number(1.0)?).await?;
             metadata.set("tags", {
-                let mut tags = DefaultValue::new_array();
-                tags.push(DefaultValue::from_str("complex")).await?;
-                tags.push(DefaultValue::from_str("test")).await?;
-                tags.push(DefaultValue::from_str(&format!("batch_{}", i / 100))).await?;
+                let mut tags = Value::new_array();
+                tags.push(Value::from_str("complex")).await?;
+                tags.push(Value::from_str("test")).await?;
+                tags.push(Value::from_str(&format!("batch_{}", i / 100))).await?;
                 tags
             }).await?;
             complex_data.set("metadata", metadata).await?;
@@ -291,7 +296,7 @@ async fn test_performance_memory_usage() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== PERFORMANCE TEST: Memory Usage ===");
 
@@ -302,18 +307,18 @@ async fn test_performance_memory_usage() {
             let start = Instant::now();
 
             for i in 0..size {
-                let mut data = DefaultValue::new_object();
+                let mut data = Value::new_object();
 
                 // Create moderate size data
                 for field in 0..20 {
                     data.set(
                         &format!("field_{}", field),
-                        DefaultValue::from_str(&format!("value_{}_{}", i, field))
+                        Value::from_str(&format!("value_{}_{}", i, field))
                     ).await.unwrap();
                 }
 
-                data.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-                data.set("size_category", DefaultValue::from_number(size as f64).unwrap()).await.unwrap();
+                data.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+                data.set("size_category", Value::from_number(size as f64).unwrap()).await.unwrap();
 
                 let result = manager.insert(
                     format!("memory_test_{}", size),
@@ -359,15 +364,15 @@ async fn test_performance_mixed_workload() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== PERFORMANCE TEST: Mixed Workload ===");
 
         // Pre-populate with some data
         for i in 0..1000 {
-            let mut data = DefaultValue::new_object();
-            data.set("id", DefaultValue::from_number(i as f64).unwrap()).await.unwrap();
-            data.set("name", DefaultValue::from_str(&format!("Initial User {}", i))).await.unwrap();
+            let mut data = Value::new_object();
+            data.set("id", Value::from_number(i as f64).unwrap()).await.unwrap();
+            data.set("name", Value::from_str(&format!("Initial User {}", i))).await.unwrap();
 
             manager.insert("mixed_users".to_string(), Some(format!("user_{}", i)), data).await.unwrap();
         }
@@ -393,10 +398,10 @@ async fn test_performance_mixed_workload() {
                 }
                 // 30% inserts (6-8)
                 6..=8 => {
-                    let mut new_data = DefaultValue::new_object();
-                    new_data.set("id", DefaultValue::from_number((1000 + insert_count) as f64).unwrap()).await.unwrap();
-                    new_data.set("name", DefaultValue::from_str(&format!("New User {}", insert_count))).await.unwrap();
-                    new_data.set("created_in_mixed", DefaultValue::from_bool(true)).await.unwrap();
+                    let mut new_data = Value::new_object();
+                    new_data.set("id", Value::from_number((1000 + insert_count) as f64).unwrap()).await.unwrap();
+                    new_data.set("name", Value::from_str(&format!("New User {}", insert_count))).await.unwrap();
+                    new_data.set("created_in_mixed", Value::from_bool(true)).await.unwrap();
 
                     let result = manager.insert("mixed_users".to_string(), None, new_data).await;
                     assert!(result.is_ok());
@@ -405,10 +410,10 @@ async fn test_performance_mixed_workload() {
                 // 10% updates (9)
                 9 => {
                     let user_id = format!("user_{}", update_count % 1000);
-                    let mut update_data = DefaultValue::new_object();
-                    update_data.set("name", DefaultValue::from_str(&format!("Updated User {}", update_count))).await.unwrap();
-                    update_data.set("updated", DefaultValue::from_bool(true)).await.unwrap();
-                    update_data.set("update_count", DefaultValue::from_number(update_count as f64).unwrap()).await.unwrap();
+                    let mut update_data = Value::new_object();
+                    update_data.set("name", Value::from_str(&format!("Updated User {}", update_count))).await.unwrap();
+                    update_data.set("updated", Value::from_bool(true)).await.unwrap();
+                    update_data.set("update_count", Value::from_number(update_count as f64).unwrap()).await.unwrap();
 
                     let _result = manager.update("mixed_users".to_string(), user_id, update_data).await;
                     // Update might fail if user doesn't exist, that's OK for this test
@@ -454,15 +459,15 @@ async fn test_performance_detailed_benchmarks() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let mut manager = DefaultModelManagerFactory::create();
+        let mut manager = DefaultModelManager::create();
 
         println!("=== DETAILED PERFORMANCE BENCHMARKS ===");
 
         // Prepare test data
-        let mut test_data = DefaultValue::new_object();
-        test_data.set("name", DefaultValue::from_str("Benchmark User")).await.unwrap();
-        test_data.set("email", DefaultValue::from_str("bench@test.com")).await.unwrap();
-        test_data.set("active", DefaultValue::from_bool(true)).await.unwrap();
+        let mut test_data = Value::new_object();
+        test_data.set("name", Value::from_str("Benchmark User")).await.unwrap();
+        test_data.set("email", Value::from_str("bench@test.com")).await.unwrap();
+        test_data.set("active", Value::from_bool(true)).await.unwrap();
 
         // Benchmark single insert - version simplificada
         let mut insert_times = Vec::new();

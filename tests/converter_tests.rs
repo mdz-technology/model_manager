@@ -1,15 +1,14 @@
 use tokio::task::LocalSet;
-use model_manager::{
-    DynamicValue, DefaultValue, DefaultConverterFactory, ConverterFactory,
-    JsonConverter, DataConverter, JsonConverterConfig, ConverterConfig,
-};
+use model_manager::{DynamicValue, DefaultValue, DefaultConverter, ConverterFactory, JsonConverter, DataConverter, JsonConverterConfig, ConverterConfig, DynamicValueFactory};
+
+type Value = <DefaultValue as DynamicValueFactory>::Value;
 
 #[tokio::test]
 async fn test_json_converter_basic() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let converter = DefaultConverterFactory::create_json_converter();
+        let converter = DefaultConverter::create_json_converter();
 
         // Test from JSON
         let json_input = r#"{"name":"Test User","age":30,"active":true}"#.to_string();
@@ -36,7 +35,7 @@ async fn test_json_converter_complex_data() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let converter = DefaultConverterFactory::create_json_converter();
+        let converter = DefaultConverter::create_json_converter();
 
         // Test complex JSON structure
         let complex_json = r#"{
@@ -89,7 +88,7 @@ async fn test_json_converter_batch_operations() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let converter = DefaultConverterFactory::create_json_converter();
+        let converter = DefaultConverter::create_json_converter();
 
         // Test batch conversion from JSON
         let json_inputs = vec![
@@ -124,15 +123,15 @@ async fn test_json_converter_pretty_printing() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let converter = DefaultConverterFactory::create_json_converter();
+        let converter = DefaultConverter::create_json_converter();
 
         // Create test data
-        let mut data = DefaultValue::new_object();
-        data.set("name", DefaultValue::from_str("Pretty Test")).await.unwrap();
-        data.set("age", DefaultValue::from_number(25.0).unwrap()).await.unwrap();
+        let mut data = DefaultValue::create();
+        data.set("name", Value::from_str("Pretty Test")).await.unwrap();
+        data.set("age", Value::from_number(25.0).unwrap()).await.unwrap();
 
-        let mut nested = DefaultValue::new_object();
-        nested.set("department", DefaultValue::from_str("Engineering")).await.unwrap();
+        let mut nested = Value::new_object();
+        nested.set("department", Value::from_str("Engineering")).await.unwrap();
         data.set("profile", nested).await.unwrap();
 
         // Test regular JSON output
@@ -154,7 +153,7 @@ async fn test_json_converter_error_handling() {
     let local_set = LocalSet::new();
 
     local_set.run_until(async {
-        let converter = DefaultConverterFactory::create_json_converter();
+        let converter = DefaultConverter::create_json_converter();
 
         // Test invalid JSON
         let invalid_json = r#"{"name": "Test", "age": }"#.to_string(); // Missing value
@@ -193,11 +192,11 @@ async fn test_json_converter_with_custom_config() {
             ..Default::default()
         };
 
-        let converter = DefaultConverterFactory::create_json_converter_with_config(custom_config);
+        let converter = DefaultConverter::create_json_converter_with_config(custom_config);
 
         // Test pretty output by default
-        let mut data = DefaultValue::new_object();
-        data.set("test", DefaultValue::from_str("custom config")).await.unwrap();
+        let mut data = DefaultValue::create();
+        data.set("test", Value::from_str("custom config")).await.unwrap();
 
         let json_output = converter.to_external(&data).await.unwrap();
         assert!(json_output.contains('\n')); // Should be pretty by default
