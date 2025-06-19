@@ -53,4 +53,21 @@ pub trait DynamicValue: Clone + Send + Sync + Unpin + 'static {
         &'a self
     ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>>;
     
+    fn has_property<'a>(
+        &'a self,
+        key: &'a str
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>>;
+    
+    fn get_property_type<'a>(
+        &'a self,
+        key: &'a str
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<String>>> + Send + 'a>>;
+    
+    fn get_property_names<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Vec<String>>> + Send + 'a>>;
+
+    fn count_properties<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<usize>> + Send + 'a>>;
 }

@@ -194,7 +194,7 @@ impl SerdeDynamicValue {
         &'a self
     ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>> {
         Box::pin(async move {
-            if self.estimate_size() < 1024 * 1024 { 
+            if self.estimate_size() < 1024 * 1024 {
                 return Ok(self.clone());
             }
             self.streaming_clone().await
@@ -275,6 +275,17 @@ impl SerdeDynamicValue {
             _ => {
                 Ok(self.clone())
             }
+        }
+    }
+
+    fn get_value_type_string(value: &Value) -> String {
+        match value {
+            Value::Null => "Null".to_string(),
+            Value::Bool(_) => "Bool".to_string(),
+            Value::Number(_) => "Number".to_string(),
+            Value::String(_) => "String".to_string(),
+            Value::Array(_) => "Array".to_string(),
+            Value::Object(_) => "Object".to_string(),
         }
     }
 
@@ -468,7 +479,7 @@ impl DynamicValue for SerdeDynamicValue {
             self.set_by_path_internal(&parts, value).await
         })
     }
-    
+
     fn deep_clone<'a>(
         &'a self
     ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>> {
@@ -476,4 +487,69 @@ impl DynamicValue for SerdeDynamicValue {
             self.deep_clone_optimized().await
         })
     }
+
+    fn has_property<'a>(
+        &'a self,
+        key: &'a str,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>> {
+        Box::pin(async move {
+            match &self.inner {
+                Value::Object(obj) => Ok(obj.contains_key(key)),
+                _ => Err(ModelError::InvalidData(
+                    "Cannot check property on non-object value".to_string(),
+                )),
+            }
+        })
+    }
+
+
+    fn get_property_type<'a>(
+        &'a self,
+        key: &'a str,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<String>>> + Send + 'a>> {
+        Box::pin(async move {
+            match &self.inner {
+                Value::Object(obj) => {
+                    match obj.get(key) {
+                        Some(value) => Ok(Some(Self::get_value_type_string(value))),
+                        None => Ok(None),
+                    }
+                }
+                _ => Err(ModelError::InvalidData(
+                    "Cannot get property type on non-object value".to_string(),
+                )),
+            }
+        })
+    }
+
+    fn get_property_names<'a>(
+        &'a self,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Vec<String>>> + Send + 'a>> {
+        Box::pin(async move {
+            match &self.inner {
+                Value::Object(obj) => {
+                    let mut names: Vec<String> = obj.keys().cloned().collect();
+                    names.sort();
+                    Ok(names)
+                }
+                _ => Err(ModelError::InvalidData(
+                    "Cannot get property names on non-object value".to_string(),
+                )),
+            }
+        })
+    }
+
+    fn count_properties<'a>(
+        &'a self,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<usize>> + Send + 'a>> {
+        Box::pin(async move {
+            match &self.inner {
+                Value::Object(obj) => Ok(obj.len()),
+                _ => Err(ModelError::InvalidData(
+                    "Cannot count properties on non-object value".to_string(),
+                )),
+            }
+        })
+    }
+    
 }
