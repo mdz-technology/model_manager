@@ -70,4 +70,18 @@ pub trait DynamicValue: Clone + Send + Sync + Unpin + 'static {
     fn count_properties<'a>(
         &'a self
     ) -> Pin<Box<dyn Future<Output = ModelResult<usize>> + Send + 'a>>;
+
+    fn merge<'a>(
+        &'a mut self,
+        other: &'a Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
+
+    fn calculate_hash<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<u64>> + Send + 'a>>;
+
+    fn equals<'a>(
+        &'a self,
+        other: &'a Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>>;
 }

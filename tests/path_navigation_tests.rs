@@ -318,8 +318,8 @@ async fn test_serde_dynamic_value_equals() {
             let value3 = DefaultValue::from_str("different_value");
 
             // When: Comparar valores
-            let are_equal = value1.equals(&value2).await;
-            let are_different = value1.equals(&value3).await;
+            let are_equal = value1.equals(&value2).await.unwrap();
+            let are_different = value1.equals(&value3).await.unwrap();
 
             // Then: Comparación correcta
             assert!(are_equal);

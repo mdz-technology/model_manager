@@ -3,6 +3,7 @@ use crate::infrastructure::implementations::object_iterator::SerdeObjectIterator
 use crate::{DynamicValue, ModelError, ModelResult};
 use serde_json::Value;
 use std::future::Future;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::pin::Pin;
 
 #[derive(Debug, Clone)]
@@ -126,14 +127,6 @@ impl SerdeDynamicValue {
 
             Ok(())
         })
-    }
-
-    fn values_are_equal(&self, other: &Self) -> bool {
-        self.inner == other.inner
-    }
-
-    pub async fn equals(&self, other: &Self) -> bool {
-        self.values_are_equal(other)
     }
 
     pub fn get_path_parts(path: &str) -> Vec<String> {
@@ -287,6 +280,199 @@ impl SerdeDynamicValue {
             Value::Array(_) => "Array".to_string(),
             Value::Object(_) => "Object".to_string(),
         }
+    }
+
+    fn merge_internal<'a>(
+        &'a mut self,
+        other: &'a Self,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>> {
+        Box::pin(async move {
+            match (&mut self.inner, &other.inner) {
+                (Value::Object(self_map), Value::Object(other_map)) => {
+                    for (key, other_value) in other_map.iter() {
+                        let other_dynamic = Self::from_value(other_value.clone());
+
+                        match self_map.get_mut(key) {
+                            Some(self_value) => {
+                                if self_value.is_object() && other_value.is_object() {
+                                    let mut self_dynamic = Self::from_value(self_value.clone());
+                                    Box::pin(self_dynamic.merge_internal(&other_dynamic)).await?;
+                                    *self_value = self_dynamic.inner;
+                                } else if self_value.is_array() && other_value.is_array() {
+                                        if let (Value::Array(self_arr), Value::Array(other_arr)) = (self_value, other_value) {
+                                            self_arr.extend(other_arr.iter().cloned());
+                                        }
+                                } else {
+                                    *self_value = other_value.clone();
+                                }
+                            }
+                            None => {
+                                self_map.insert(key.clone(), other_value.clone());
+                            }
+                        }
+                    }
+                    Ok(())
+                }
+                
+                (Value::Array(self_arr), Value::Array(other_arr)) => {
+                    self_arr.extend(other_arr.iter().cloned());
+                    Ok(())
+                }
+                
+                _ => {
+                    self.inner = other.inner.clone();
+                    Ok(())
+                }
+            }
+        })
+    }
+    
+    fn calculate_hash_internal<'a>(
+        &'a self,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<u64>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut hasher = DefaultHasher::new();
+
+            match &self.inner {
+                Value::Null => {
+                    "null".hash(&mut hasher);
+                }
+                Value::Bool(b) => {
+                    "bool".hash(&mut hasher);
+                    b.hash(&mut hasher);
+                }
+                Value::Number(n) => {
+                    "number".hash(&mut hasher);
+                    // Convertir a string para hash consistente
+                    n.to_string().hash(&mut hasher);
+                }
+                Value::String(s) => {
+                    "string".hash(&mut hasher);
+                    s.hash(&mut hasher);
+                }
+                Value::Array(arr) => {
+                    "array".hash(&mut hasher);
+                    arr.len().hash(&mut hasher);
+
+                    if arr.len() > 1000 {
+                        let indices = [0, arr.len()/4, arr.len()/2, 3*arr.len()/4, arr.len()-1];
+                        for &idx in &indices {
+                            if idx < arr.len() {
+                                let elem_dynamic = Self::from_value(arr[idx].clone());
+                                let elem_hash = Box::pin(elem_dynamic.calculate_hash_internal()).await?;
+                                elem_hash.hash(&mut hasher);
+                            }
+                        }
+                    } else {
+                        for value in arr {
+                            let elem_dynamic = Self::from_value(value.clone());
+                            let elem_hash = Box::pin(elem_dynamic.calculate_hash_internal()).await?;
+                            elem_hash.hash(&mut hasher);
+                        }
+                    }
+                }
+                Value::Object(obj) => {
+                    "object".hash(&mut hasher);
+                    obj.len().hash(&mut hasher);
+
+                    let mut sorted_keys: Vec<_> = obj.keys().collect();
+                    sorted_keys.sort();
+
+                    if sorted_keys.len() > 100 {
+                        let sample_size = 20;
+                        let step = sorted_keys.len() / sample_size;
+                        for i in (0..sorted_keys.len()).step_by(step.max(1)).take(sample_size) {
+                            let key = sorted_keys[i];
+                            key.hash(&mut hasher);
+                            if let Some(value) = obj.get(key) {
+                                let value_dynamic = Self::from_value(value.clone());
+                                let value_hash = Box::pin(value_dynamic.calculate_hash_internal()).await?;
+                                value_hash.hash(&mut hasher);
+                            }
+                        }
+                    } else {
+                        for key in sorted_keys {
+                            key.hash(&mut hasher);
+                            if let Some(value) = obj.get(key) {
+                                let value_dynamic = Self::from_value(value.clone());
+                                let value_hash = Box::pin(value_dynamic.calculate_hash_internal()).await?;
+                                value_hash.hash(&mut hasher);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Ok(hasher.finish())
+        })
+    }
+
+    fn equals_internal<'a>(
+        &'a self,
+        other: &'a Self,
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>> {
+        Box::pin(async move {
+            if std::mem::discriminant(&self.inner) != std::mem::discriminant(&other.inner) {
+                return Ok(false);
+            }
+
+            if self.estimate_size() > 10000 || other.estimate_size() > 10000 {
+                let self_hash = Box::pin(self.calculate_hash_internal()).await?;
+                let other_hash = Box::pin(other.calculate_hash_internal()).await?;
+
+                if self_hash != other_hash {
+                    return Ok(false);
+                }
+            }
+
+            match (&self.inner, &other.inner) {
+                (Value::Null, Value::Null) => Ok(true),
+                (Value::Bool(a), Value::Bool(b)) => Ok(a == b),
+                (Value::Number(a), Value::Number(b)) => Ok(a == b),
+                (Value::String(a), Value::String(b)) => Ok(a == b),
+
+                (Value::Array(a), Value::Array(b)) => {
+                    if a.len() != b.len() {
+                        return Ok(false);
+                    }
+
+                    for (a_val, b_val) in a.iter().zip(b.iter()) {
+                        let a_dynamic = Self::from_value(a_val.clone());
+                        let b_dynamic = Self::from_value(b_val.clone());
+
+                        if !Box::pin(a_dynamic.equals_internal(&b_dynamic)).await? {
+                            return Ok(false);
+                        }
+                    }
+
+                    Ok(true)
+                }
+
+                (Value::Object(a), Value::Object(b)) => {
+                    if a.len() != b.len() {
+                        return Ok(false);
+                    }
+
+                    for (key, a_val) in a.iter() {
+                        match b.get(key) {
+                            Some(b_val) => {
+                                let a_dynamic = Self::from_value(a_val.clone());
+                                let b_dynamic = Self::from_value(b_val.clone());
+
+                                if !Box::pin(a_dynamic.equals_internal(&b_dynamic)).await? {
+                                    return Ok(false);
+                                }
+                            }
+                            None => return Ok(false),
+                        }
+                    }
+
+                    Ok(true)
+                }
+
+                _ => Ok(false),
+            }
+        })
     }
 
 }
@@ -551,5 +737,30 @@ impl DynamicValue for SerdeDynamicValue {
             }
         })
     }
-    
+
+    fn merge<'a>(
+        &'a mut self,
+        other: &'a Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>> {
+        Box::pin(async move {
+            self.merge_internal(other).await
+        })
+    }
+
+    fn calculate_hash<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<u64>> + Send + 'a>> {
+        Box::pin(async move {
+            self.calculate_hash_internal().await
+        })
+    }
+
+    fn equals<'a>(
+        &'a self,
+        other: &'a Self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>> {
+        Box::pin(async move {
+            self.equals_internal(other).await
+        })
+    }
 }
