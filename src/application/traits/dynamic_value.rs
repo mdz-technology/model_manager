@@ -48,4 +48,9 @@ pub trait DynamicValue: Clone + Send + Sync + Unpin + 'static {
         path: &'a str,
         value: Self
     ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
+
+    fn deep_clone<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>>;
+    
 }

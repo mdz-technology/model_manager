@@ -189,6 +189,95 @@ impl SerdeDynamicValue {
             .collect::<Vec<_>>()
             .join(".")
     }
+
+    fn deep_clone_optimized<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>> {
+        Box::pin(async move {
+            if self.estimate_size() < 1024 * 1024 { 
+                return Ok(self.clone());
+            }
+            self.streaming_clone().await
+        })
+    }
+
+    fn estimate_size(&self) -> usize {
+        match &self.inner {
+            Value::Null => 8,
+            Value::Bool(_) => 8,
+            Value::Number(_) => 16,
+            Value::String(s) => s.len() + 24,
+            Value::Array(arr) => {
+                24 + arr.iter().map(|v| Self::from_value(v.clone()).estimate_size()).sum::<usize>()
+            }
+            Value::Object(obj) => {
+                24 + obj.iter()
+                    .map(|(k, v)| k.len() + Self::from_value(v.clone()).estimate_size())
+                    .sum::<usize>()
+            }
+        }
+    }
+
+    async fn streaming_clone(&self) -> ModelResult<Self> {
+        match &self.inner {
+            Value::Object(obj) => {
+                let mut new_map = serde_json::Map::new();
+
+                let mut batch = Vec::new();
+                const BATCH_SIZE: usize = 1000;
+
+                for (key, value) in obj.iter() {
+                    batch.push((key.clone(), value.clone()));
+
+                    if batch.len() >= BATCH_SIZE {
+                        for (k, v) in batch.drain(..) {
+                            let cloned_value = Self::from_value(v).deep_clone_optimized().await?;
+                            new_map.insert(k, cloned_value.inner);
+                        }
+
+                        tokio::task::yield_now().await;
+                    }
+                }
+
+                for (k, v) in batch {
+                    let cloned_value = Self::from_value(v).deep_clone_optimized().await?;
+                    new_map.insert(k, cloned_value.inner);
+                }
+
+                Ok(Self::from_value(Value::Object(new_map)))
+            }
+            Value::Array(arr) => {
+                let mut new_array = Vec::new();
+
+                let mut batch = Vec::new();
+                const BATCH_SIZE: usize = 1000;
+
+                for value in arr.iter() {
+                    batch.push(value.clone());
+
+                    if batch.len() >= BATCH_SIZE {
+                        for v in batch.drain(..) {
+                            let cloned_value = Self::from_value(v).deep_clone_optimized().await?;
+                            new_array.push(cloned_value.inner);
+                        }
+
+                        tokio::task::yield_now().await;
+                    }
+                }
+
+                for v in batch {
+                    let cloned_value = Self::from_value(v).deep_clone_optimized().await?;
+                    new_array.push(cloned_value.inner);
+                }
+
+                Ok(Self::from_value(Value::Array(new_array)))
+            }
+            _ => {
+                Ok(self.clone())
+            }
+        }
+    }
+
 }
 
 impl DynamicValue for SerdeDynamicValue {
@@ -377,6 +466,14 @@ impl DynamicValue for SerdeDynamicValue {
             }
 
             self.set_by_path_internal(&parts, value).await
+        })
+    }
+    
+    fn deep_clone<'a>(
+        &'a self
+    ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>> {
+        Box::pin(async move {
+            self.deep_clone_optimized().await
         })
     }
 }
