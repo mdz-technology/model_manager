@@ -12,13 +12,5 @@ pub enum ModelError {
 
     #[error("System error: {0}")]
     SystemError(String),
-
-    #[error("Actor error: {0}")]
-    ActorError(String),
-}
-
-impl From<actix::MailboxError> for ModelError {
-    fn from(error: actix::MailboxError) -> Self {
-        ModelError::ActorError(error.to_string())
-    }
+    
 }

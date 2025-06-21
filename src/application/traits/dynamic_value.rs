@@ -2,8 +2,7 @@ use std::pin::Pin;
 use std::future::Future;
 use super::super::models::errors::ModelResult;
 
-pub trait DynamicValue: Clone + Send + Sync + Unpin + 'static {
-
+pub trait DynamicValue: Clone + Send + Sync + 'static {
     fn new_object() -> Self;
     fn new_array() -> Self;
     fn from_str(s: &str) -> Self;
@@ -16,72 +15,20 @@ pub trait DynamicValue: Clone + Send + Sync + Unpin + 'static {
     fn as_str(&self) -> Option<String>;
     fn as_number(&self) -> Option<f64>;
     fn as_bool(&self) -> Option<bool>;
-    fn get<'a>(
-        &'a self,
-        key: &'a str
-    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Self>>> + Send + 'a>>;
-    fn set<'a>(
-        &'a mut self,
-        key: &'a str,
-        value: Self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
-    fn push<'a>(
-        &'a mut self,
-        value: Self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
-    fn as_array<'a>(
-        &'a self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Vec<Self>>>> + Send + 'a>>;
+    fn get(&self, key: &str) -> ModelResult<Option<Self>>;
+    fn set(&mut self, key: &str, value: Self) -> ModelResult<()>;
+    fn push(&mut self, value: Self) -> ModelResult<()>;
+    fn as_array(&self) -> ModelResult<Option<Vec<Self>>>;
     fn to_string(&self) -> String;
-    fn get_by_path<'a>(
-        &'a self,
-        path: &'a str
-    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<Self>>> + Send + 'a>>;
-
-    fn has_path<'a>(
-        &'a self,
-        path: &'a str
-    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>>;
-
-    fn set_by_path<'a>(
-        &'a mut self,
-        path: &'a str,
-        value: Self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
-
-    fn deep_clone<'a>(
-        &'a self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<Self>> + Send + 'a>>;
-    
-    fn has_property<'a>(
-        &'a self,
-        key: &'a str
-    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>>;
-    
-    fn get_property_type<'a>(
-        &'a self,
-        key: &'a str
-    ) -> Pin<Box<dyn Future<Output = ModelResult<Option<String>>> + Send + 'a>>;
-    
-    fn get_property_names<'a>(
-        &'a self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<Vec<String>>> + Send + 'a>>;
-
-    fn count_properties<'a>(
-        &'a self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<usize>> + Send + 'a>>;
-
-    fn merge<'a>(
-        &'a mut self,
-        other: &'a Self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<()>> + Send + 'a>>;
-
-    fn calculate_hash<'a>(
-        &'a self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<u64>> + Send + 'a>>;
-
-    fn equals<'a>(
-        &'a self,
-        other: &'a Self
-    ) -> Pin<Box<dyn Future<Output = ModelResult<bool>> + Send + 'a>>;
+    fn get_by_path(&self, path: &str) -> ModelResult<Option<Self>>;
+    fn has_path(&self, path: &str) -> ModelResult<bool>;
+    fn set_by_path(&mut self, path: &str, value: Self) -> ModelResult<()>;
+    fn deep_clone(&self) -> ModelResult<Self>;
+    fn has_property(&self, key: &str) -> ModelResult<bool>;
+    fn get_property_type(&self, key: &str) -> ModelResult<Option<String>>;
+    fn get_property_names(&self) -> ModelResult<Vec<String>>;
+    fn count_properties(&self) -> ModelResult<usize>;
+    fn merge(&mut self, other: &Self) -> ModelResult<()>;
+    fn calculate_hash(&self) -> ModelResult<u64>;
+    fn equals(&self, other: &Self) -> ModelResult<bool>;
 }

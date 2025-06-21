@@ -1,44 +1,24 @@
 use std::future::Future;
 use std::pin::Pin;
 
-pub trait ArrayIterator: Send + Unpin {
+pub trait ArrayIterator: Send {
     type Item: Clone + Send + Sync + 'static;
-    fn next<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = Option<Self::Item>> + Send + 'a>>;
+    fn next(&mut self) -> Option<Self::Item>;
     fn size_hint(&self) -> (usize, Option<usize>);
-    fn nth<'a>(
-        &'a mut self,
-        n: usize,
-    ) -> Pin<Box<dyn Future<Output = Option<Self::Item>> + Send + 'a>>;
-    fn count<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = usize> + Send + 'a>>;
-    fn collect<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = Vec<Self::Item>> + Send + 'a>>;
-    fn find<'a, F, Fut>(
-        &'a mut self,
-        predicate: F,
-    ) -> Pin<Box<dyn Future<Output = Option<Self::Item>> + Send + 'a>>
+    fn nth(&mut self, n: usize) -> Option<Self::Item>;
+    fn count(&mut self) -> usize;
+    fn collect(&mut self) -> Vec<Self::Item>;
+    fn find<F>(&mut self, predicate: F) -> Option<Self::Item>
     where
-        F: Fn(&Self::Item) -> Fut + Send + 'a,
-        Fut: Future<Output = bool> + Send;
-    fn filter<'a, F, Fut>(
-        &'a mut self,
-        predicate: F,
-    ) -> Pin<Box<dyn Future<Output = Vec<Self::Item>> + Send + 'a>>
+        F: Fn(&Self::Item) -> bool;
+    fn filter<F>(&mut self, predicate: F) -> Vec<Self::Item>
     where
-        F: Fn(&Self::Item) -> Fut + Send + 'a,
-        Fut: Future<Output = bool> + Send;
-    fn map<'a, F, Fut, R>(
-        &'a mut self,
-        mapper: F,
-    ) -> Pin<Box<dyn Future<Output = Vec<R>> + Send + 'a>>
+        F: Fn(&Self::Item) -> bool;
+    fn map<F, R>(&mut self, mapper: F) -> Vec<R>
     where
-        F: Fn(Self::Item) -> Fut + Send + 'a,
-        Fut: Future<Output = R> + Send,
-        R: Clone + Send + 'a;
-    fn for_each_batch<'a, F, Fut>(
-        &'a mut self,
-        batch_size: usize,
-        processor: F,
-    ) -> Pin<Box<dyn Future<Output = usize> + Send + 'a>>
+        F: Fn(Self::Item) -> R,
+        R: Clone + Send;
+    fn for_each_batch<F>(&mut self, batch_size: usize, processor: F) -> usize
     where
-        F: Fn(Vec<Self::Item>) -> Fut + Send + 'a,
-        Fut: Future<Output = ()> + Send;
+        F: Fn(Vec<Self::Item>);
 }

@@ -4,7 +4,7 @@ use crate::application::services::iterator_factory::{
 use crate::infrastructure::implementations::array_iterator::SerdeArrayIterator;
 use crate::infrastructure::implementations::object_iterator::SerdeObjectIterator;
 use crate::infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;
-pub struct DefaultObjectIteratorFactory;
+struct DefaultObjectIteratorFactory;
 
 impl ObjectIteratorFactory<SerdeDynamicValue> for DefaultObjectIteratorFactory {
     type ObjectIterator = SerdeObjectIterator;
@@ -14,7 +14,7 @@ impl ObjectIteratorFactory<SerdeDynamicValue> for DefaultObjectIteratorFactory {
     }
 }
 
-pub struct DefaultArrayIteratorFactory;
+struct DefaultArrayIteratorFactory;
 
 impl ArrayIteratorFactory<SerdeDynamicValue> for DefaultArrayIteratorFactory {
     type ArrayIterator = SerdeArrayIterator;

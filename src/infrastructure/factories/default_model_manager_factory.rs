@@ -1,12 +1,13 @@
-use crate::infrastructure::implementations::actix_model_manager::ActixModelManager;
+use crate::infrastructure::implementations::model_manager::SimpleModelManager;
 use crate::infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;
 use crate::ModelManagerFactory;
 
 pub struct DefaultModelManagerFactory;
 
 impl ModelManagerFactory<SerdeDynamicValue> for DefaultModelManagerFactory {
-    type Manager = ActixModelManager<SerdeDynamicValue>;
+    type Manager = SimpleModelManager<SerdeDynamicValue>;
+
     fn create() -> Self::Manager {
-        ActixModelManager::new()
+        SimpleModelManager::new()
     }
 }

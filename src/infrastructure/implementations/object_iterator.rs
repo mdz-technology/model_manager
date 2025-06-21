@@ -2,8 +2,6 @@ use crate::application::iterators::object_iterator::ObjectIterator;
 use crate::infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;
 use serde_json::{Map, Value};
 use std::collections::btree_map::IntoIter;
-use std::future::Future;
-use std::pin::Pin;
 
 #[derive(Debug)]
 pub struct SerdeObjectIterator {
@@ -28,17 +26,13 @@ impl SerdeObjectIterator {
 impl ObjectIterator for SerdeObjectIterator {
     type Item = SerdeDynamicValue;
 
-    fn next<'a>(
-        &'a mut self,
-    ) -> Pin<Box<dyn Future<Output = Option<(String, Self::Item)>> + Send + 'a>> {
-        Box::pin(async move {
-            if let Some((key, value)) = self.inner.next() {
-                self.current_index += 1;
-                Some((key, SerdeDynamicValue::from_value(value)))
-            } else {
-                None
-            }
-        })
+    fn next(&mut self) -> Option<(String, Self::Item)> {
+        if let Some((key, value)) = self.inner.next() {
+            self.current_index += 1;
+            Some((key, SerdeDynamicValue::from_value(value)))
+        } else {
+            None
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -46,86 +40,63 @@ impl ObjectIterator for SerdeObjectIterator {
         (remaining, Some(remaining))
     }
 
-    fn find_key<'a>(
-        &'a mut self,
-        target_key: &'a str,
-    ) -> Pin<Box<dyn Future<Output = Option<Self::Item>> + Send + 'a>> {
-        Box::pin(async move {
-            while let Some((key, value)) = self.inner.next() {
-                self.current_index += 1;
-                if key == target_key {
-                    return Some(SerdeDynamicValue::from_value(value));
-                }
+    fn find_key(&mut self, target_key: &str) -> Option<Self::Item> {
+        while let Some((key, value)) = self.inner.next() {
+            self.current_index += 1;
+            if key == target_key {
+                return Some(SerdeDynamicValue::from_value(value));
             }
-            None
-        })
+        }
+        None
     }
 
-    fn count<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = usize> + Send + 'a>> {
-        Box::pin(async move {
-            let remaining = self.inner.len();
-            self.current_index = self.total_size;
-            remaining
-        })
+    fn count(&mut self) -> usize {
+        let remaining = self.inner.len();
+        self.current_index = self.total_size;
+        remaining
     }
 
-    fn collect<'a>(
-        &'a mut self,
-    ) -> Pin<Box<dyn Future<Output = Vec<(String, Self::Item)>> + Send + 'a>> {
-        Box::pin(async move {
-            let mut results = Vec::new();
+    fn collect(&mut self) -> Vec<(String, Self::Item)> {
+        let mut results = Vec::new();
 
-            while let Some((key, value)) = self.inner.next() {
-                self.current_index += 1;
-                results.push((key, SerdeDynamicValue::from_value(value)));
-            }
+        while let Some((key, value)) = self.inner.next() {
+            self.current_index += 1;
+            results.push((key, SerdeDynamicValue::from_value(value)));
+        }
 
-            results
-        })
+        results
     }
 
-    fn filter<'a, F, Fut>(
-        &'a mut self,
-        predicate: F,
-    ) -> Pin<Box<dyn Future<Output = Vec<(String, Self::Item)>> + Send + 'a>>
+    fn filter<F>(&mut self, predicate: F) -> Vec<(String, Self::Item)>
     where
-        F: Fn(&str, &Self::Item) -> Fut + Send + 'a,
-        Fut: Future<Output = bool> + Send,
+        F: Fn(&str, &Self::Item) -> bool,
     {
-        Box::pin(async move {
-            let mut results = Vec::new();
-            while let Some((key, value)) = self.inner.next() {
-                self.current_index += 1;
-                let item = SerdeDynamicValue::from_value(value);
+        let mut results = Vec::new();
+        while let Some((key, value)) = self.inner.next() {
+            self.current_index += 1;
+            let item = SerdeDynamicValue::from_value(value);
 
-                if predicate(&key, &item).await {
-                    results.push((key, item));
-                }
+            if predicate(&key, &item) {
+                results.push((key, item));
             }
+        }
 
-            results
-        })
+        results
     }
 
-    fn map<'a, F, Fut, R>(
-        &'a mut self,
-        mapper: F,
-    ) -> Pin<Box<dyn Future<Output = Vec<(String, R)>> + Send + 'a>>
+    fn map<F, R>(&mut self, mapper: F) -> Vec<(String, R)>
     where
-        F: Fn(String, Self::Item) -> Fut + Send + 'a,
-        Fut: Future<Output = R> + Send,
-        R: Clone + Send + 'a,
+        F: Fn(String, Self::Item) -> R,
+        R: Clone + Send,
     {
-        Box::pin(async move {
-            let mut results = Vec::new();
-            while let Some((key, value)) = self.inner.next() {
-                self.current_index += 1;
-                let item = SerdeDynamicValue::from_value(value);
-                let mapped_value = mapper(key.clone(), item).await;
-                results.push((key, mapped_value));
-            }
+        let mut results = Vec::new();
+        while let Some((key, value)) = self.inner.next() {
+            self.current_index += 1;
+            let item = SerdeDynamicValue::from_value(value);
+            let mapped_value = mapper(key.clone(), item);
+            results.push((key, mapped_value));
+        }
 
-            results
-        })
+        results
     }
 }
