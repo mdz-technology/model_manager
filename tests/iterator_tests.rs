@@ -1,15 +1,11 @@
 use model_manager::{
-    ArrayIterator, ArrayIteratorFactory, ObjectIterator, ObjectIteratorFactory,
-    DefaultValue, DynamicValue, DynamicValueFactory, IteratorFactory,
-    DefaultIteratorFactory, ModelManager, ModelManagerFactory,
-    DefaultModelManager,
+    ArrayIterator, CoreValue, DefaultIteratorFactory, DefaultModelManager, DefaultValueFactory,
+    IteratorFactory, ModelManager, ModelManagerFactory, ObjectIterator, ValueFactory,
 };
-
-type Value = <DefaultValue as DynamicValueFactory>::Value;
 
 #[test]
 fn test_debug_simple_array_creation() {
-    let empty_array = Value::new_array();
+    let empty_array = DefaultValueFactory::create_array();
     assert!(empty_array.is_array());
     assert!(empty_array.is_empty());
     let iterator_result = DefaultIteratorFactory::create_array_iterator(empty_array);
@@ -26,7 +22,7 @@ fn test_debug_simple_array_creation() {
 
 #[test]
 fn test_debug_simple_object_creation() {
-    let empty_object = Value::new_object();
+    let empty_object = DefaultValueFactory::create_object();
 
     assert!(empty_object.is_object());
     assert!(empty_object.is_empty());
@@ -46,34 +42,34 @@ fn test_debug_simple_object_creation() {
 
 #[test]
 fn test_array_iterator_basic_next() {
-    let non_array = Value::from_str("not an array");
+    let non_array = DefaultValueFactory::create_string("not an array");
 
     let array_result = DefaultIteratorFactory::create_array_iterator(non_array);
 
     assert!(array_result.is_err());
     let error_msg = array_result.unwrap_err();
     assert!(
-        error_msg.to_lowercase().contains("array")
-            || error_msg.to_lowercase().contains("invalid")
+        error_msg.to_lowercase().contains("array") || error_msg.to_lowercase().contains("invalid")
     );
 
-    let non_object = Value::from_number(123.0).unwrap();
+    let non_object = DefaultValueFactory::create_number(123.0).unwrap();
 
     let object_result = DefaultIteratorFactory::create_object_iterator(non_object);
 
     assert!(object_result.is_err());
     let error_msg = object_result.unwrap_err();
     assert!(
-        error_msg.to_lowercase().contains("object")
-            || error_msg.to_lowercase().contains("invalid")
+        error_msg.to_lowercase().contains("object") || error_msg.to_lowercase().contains("invalid")
     );
 }
 
 #[test]
 fn test_array_iterator_size_hint() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 0..5 {
-        array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
@@ -91,9 +87,11 @@ fn test_array_iterator_size_hint() {
 
 #[test]
 fn test_array_iterator_nth() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 0..10 {
-        array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
@@ -113,9 +111,11 @@ fn test_array_iterator_nth() {
 
 #[test]
 fn test_array_iterator_count() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 0..7 {
-        array.push(Value::from_str(&format!("item_{}", i))).unwrap();
+        array
+            .push(DefaultValueFactory::create_string(&format!("item_{}", i)))
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
@@ -126,10 +126,14 @@ fn test_array_iterator_count() {
 
 #[test]
 fn test_array_iterator_collect() {
-    let mut array = Value::new_array();
-    array.push(Value::from_str("text")).unwrap();
-    array.push(Value::from_number(42.0).unwrap()).unwrap();
-    array.push(Value::from_bool(true)).unwrap();
+    let mut array = DefaultValueFactory::create_array();
+    array
+        .push(DefaultValueFactory::create_string("text"))
+        .unwrap();
+    array
+        .push(DefaultValueFactory::create_number(42.0).unwrap())
+        .unwrap();
+    array.push(DefaultValueFactory::create_bool(true)).unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
     let collected = iterator.collect();
@@ -142,40 +146,42 @@ fn test_array_iterator_collect() {
 
 #[test]
 fn test_array_iterator_find() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 1..=10 {
-        array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
 
-    let found = iterator.find(|item| {
-        item.as_number().unwrap_or(0.0) == 7.0
-    });
+    let found = iterator.find(|item| item.as_number().unwrap_or(0.0) == 7.0);
 
     assert!(found.is_some());
     assert_eq!(found.unwrap().as_number().unwrap(), 7.0);
 
     let mut iterator2 = DefaultIteratorFactory::create_array_iterator({
-        let mut arr = Value::new_array();
+        let mut arr = DefaultValueFactory::create_array();
         for i in 1..=5 {
-            arr.push(Value::from_number(i as f64).unwrap()).unwrap();
+            arr.push(DefaultValueFactory::create_number(i as f64).unwrap())
+                .unwrap();
         }
         arr
-    }).unwrap();
+    })
+    .unwrap();
 
-    let not_found = iterator2.find(|item| {
-        item.as_number().unwrap_or(0.0) == 100.0
-    });
+    let not_found = iterator2.find(|item| item.as_number().unwrap_or(0.0) == 100.0);
 
     assert!(not_found.is_none());
 }
 
 #[test]
 fn test_array_iterator_filter() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 1..=10 {
-        array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
@@ -201,16 +207,20 @@ fn test_array_iterator_filter() {
 
 #[test]
 fn test_array_iterator_map() {
-    let mut array = Value::new_array();
-    array.push(Value::from_str("hello")).unwrap();
-    array.push(Value::from_str("world")).unwrap();
-    array.push(Value::from_str("rust")).unwrap();
+    let mut array = DefaultValueFactory::create_array();
+    array
+        .push(DefaultValueFactory::create_string("hello"))
+        .unwrap();
+    array
+        .push(DefaultValueFactory::create_string("world"))
+        .unwrap();
+    array
+        .push(DefaultValueFactory::create_string("rust"))
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
 
-    let mapped: Vec<usize> = iterator.map(|item| {
-        item.as_str().unwrap_or_default().len()
-    });
+    let mapped: Vec<usize> = iterator.map(|item| item.as_str().unwrap_or_default().len());
 
     assert_eq!(mapped.len(), 3);
     assert_eq!(mapped[0], 5);
@@ -220,9 +230,11 @@ fn test_array_iterator_map() {
 
 #[test]
 fn test_array_iterator_for_each_batch() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 1..=10 {
-        array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array).unwrap();
@@ -264,7 +276,7 @@ fn test_array_iterator_for_each_batch() {
 
 #[test]
 fn test_array_iterator_empty_array() {
-    let empty_array = Value::new_array();
+    let empty_array = DefaultValueFactory::create_array();
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(empty_array).unwrap();
 
@@ -273,7 +285,8 @@ fn test_array_iterator_empty_array() {
     assert_eq!(iterator.count(), 0);
     assert_eq!(iterator.collect().len(), 0);
 
-    let mut iterator2 = DefaultIteratorFactory::create_array_iterator(Value::new_array()).unwrap();
+    let mut iterator2 =
+        DefaultIteratorFactory::create_array_iterator(DefaultValueFactory::create_array()).unwrap();
 
     let not_found = iterator2.find(|_| true);
     assert!(not_found.is_none());
@@ -283,9 +296,11 @@ fn test_array_iterator_empty_array() {
 
 #[test]
 fn test_array_iterator_large_dataset() {
-    let mut large_array = Value::new_array();
+    let mut large_array = DefaultValueFactory::create_array();
     for i in 0..1000 {
-        large_array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        large_array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(large_array).unwrap();
@@ -298,12 +313,14 @@ fn test_array_iterator_large_dataset() {
     assert!(duration.as_millis() < 100);
 
     let mut iterator2 = DefaultIteratorFactory::create_array_iterator({
-        let mut arr = Value::new_array();
+        let mut arr = DefaultValueFactory::create_array();
         for i in 0..1000 {
-            arr.push(Value::from_number(i as f64).unwrap()).unwrap();
+            arr.push(DefaultValueFactory::create_number(i as f64).unwrap())
+                .unwrap();
         }
         arr
-    }).unwrap();
+    })
+    .unwrap();
 
     let filtered = iterator2.filter(|item| {
         let num = item.as_number().unwrap_or(0.0);
@@ -312,16 +329,24 @@ fn test_array_iterator_large_dataset() {
 
     assert_eq!(filtered.len(), 10);
 
-    println!("✅ Array iterator large dataset test passed in {:?}", duration);
+    println!(
+        "✅ Array iterator large dataset test passed in {:?}",
+        duration
+    );
 }
-
 
 #[test]
 fn test_object_iterator_basic_next() {
-    let mut object = Value::new_object();
-    object.set("name", Value::from_str("John")).unwrap();
-    object.set("age", Value::from_number(30.0).unwrap()).unwrap();
-    object.set("active", Value::from_bool(true)).unwrap();
+    let mut object = DefaultValueFactory::create_object();
+    object
+        .set("name", DefaultValueFactory::create_string("John"))
+        .unwrap();
+    object
+        .set("age", DefaultValueFactory::create_number(30.0).unwrap())
+        .unwrap();
+    object
+        .set("active", DefaultValueFactory::create_bool(true))
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
 
@@ -349,11 +374,19 @@ fn test_object_iterator_basic_next() {
 
 #[test]
 fn test_object_iterator_size_hint() {
-    let mut object = Value::new_object();
-    object.set("prop1", Value::from_str("value1")).unwrap();
-    object.set("prop2", Value::from_str("value2")).unwrap();
-    object.set("prop3", Value::from_str("value3")).unwrap();
-    object.set("prop4", Value::from_str("value4")).unwrap();
+    let mut object = DefaultValueFactory::create_object();
+    object
+        .set("prop1", DefaultValueFactory::create_string("value1"))
+        .unwrap();
+    object
+        .set("prop2", DefaultValueFactory::create_string("value2"))
+        .unwrap();
+    object
+        .set("prop3", DefaultValueFactory::create_string("value3"))
+        .unwrap();
+    object
+        .set("prop4", DefaultValueFactory::create_string("value4"))
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
 
@@ -372,10 +405,22 @@ fn test_object_iterator_size_hint() {
 
 #[test]
 fn test_object_iterator_find_key() {
-    let mut object = Value::new_object();
-    object.set("user_name", Value::from_str("Alice")).unwrap();
-    object.set("user_email", Value::from_str("alice@example.com")).unwrap();
-    object.set("user_score", Value::from_number(95.5).unwrap()).unwrap();
+    let mut object = DefaultValueFactory::create_object();
+    object
+        .set("user_name", DefaultValueFactory::create_string("Alice"))
+        .unwrap();
+    object
+        .set(
+            "user_email",
+            DefaultValueFactory::create_string("alice@example.com"),
+        )
+        .unwrap();
+    object
+        .set(
+            "user_score",
+            DefaultValueFactory::create_number(95.5).unwrap(),
+        )
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
 
@@ -396,9 +441,14 @@ fn test_object_iterator_find_key() {
 
 #[test]
 fn test_object_iterator_count() {
-    let mut object = Value::new_object();
+    let mut object = DefaultValueFactory::create_object();
     for i in 0..6 {
-        object.set(&format!("field_{}", i), Value::from_number(i as f64).unwrap()).unwrap();
+        object
+            .set(
+                &format!("field_{}", i),
+                DefaultValueFactory::create_number(i as f64).unwrap(),
+            )
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
@@ -411,10 +461,19 @@ fn test_object_iterator_count() {
 
 #[test]
 fn test_object_iterator_collect() {
-    let mut object = Value::new_object();
-    object.set("text_field", Value::from_str("hello")).unwrap();
-    object.set("number_field", Value::from_number(123.45).unwrap()).unwrap();
-    object.set("bool_field", Value::from_bool(false)).unwrap();
+    let mut object = DefaultValueFactory::create_object();
+    object
+        .set("text_field", DefaultValueFactory::create_string("hello"))
+        .unwrap();
+    object
+        .set(
+            "number_field",
+            DefaultValueFactory::create_number(123.45).unwrap(),
+        )
+        .unwrap();
+    object
+        .set("bool_field", DefaultValueFactory::create_bool(false))
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
     let collected = iterator.collect();
@@ -437,18 +496,26 @@ fn test_object_iterator_collect() {
 
 #[test]
 fn test_object_iterator_filter() {
-    let mut object = Value::new_object();
-    object.set("score1", Value::from_number(85.0).unwrap()).unwrap();
-    object.set("name", Value::from_str("Test")).unwrap();
-    object.set("score2", Value::from_number(92.0).unwrap()).unwrap();
-    object.set("active", Value::from_bool(true)).unwrap();
-    object.set("score3", Value::from_number(78.0).unwrap()).unwrap();
+    let mut object = DefaultValueFactory::create_object();
+    object
+        .set("score1", DefaultValueFactory::create_number(85.0).unwrap())
+        .unwrap();
+    object
+        .set("name", DefaultValueFactory::create_string("Test"))
+        .unwrap();
+    object
+        .set("score2", DefaultValueFactory::create_number(92.0).unwrap())
+        .unwrap();
+    object
+        .set("active", DefaultValueFactory::create_bool(true))
+        .unwrap();
+    object
+        .set("score3", DefaultValueFactory::create_number(78.0).unwrap())
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
 
-    let filtered = iterator.filter(|key, _value| {
-        key.starts_with("score")
-    });
+    let filtered = iterator.filter(|key, _value| key.starts_with("score"));
 
     assert_eq!(filtered.len(), 3);
 
@@ -462,16 +529,21 @@ fn test_object_iterator_filter() {
 
 #[test]
 fn test_object_iterator_map() {
-    let mut object = Value::new_object();
-    object.set("first_name", Value::from_str("John")).unwrap();
-    object.set("last_name", Value::from_str("Doe")).unwrap();
-    object.set("city", Value::from_str("NYC")).unwrap();
+    let mut object = DefaultValueFactory::create_object();
+    object
+        .set("first_name", DefaultValueFactory::create_string("John"))
+        .unwrap();
+    object
+        .set("last_name", DefaultValueFactory::create_string("Doe"))
+        .unwrap();
+    object
+        .set("city", DefaultValueFactory::create_string("NYC"))
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(object).unwrap();
 
-    let mapped: Vec<(String, usize)> = iterator.map(|_key, value| {
-        value.as_str().unwrap_or_default().len()
-    });
+    let mapped: Vec<(String, usize)> =
+        iterator.map(|_key, value| value.as_str().unwrap_or_default().len());
 
     assert_eq!(mapped.len(), 3);
 
@@ -486,7 +558,7 @@ fn test_object_iterator_map() {
 
 #[test]
 fn test_object_iterator_empty_object() {
-    let empty_object = Value::new_object();
+    let empty_object = DefaultValueFactory::create_object();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(empty_object).unwrap();
 
@@ -501,13 +573,19 @@ fn test_object_iterator_empty_object() {
 
 #[test]
 fn test_object_iterator_nested_objects() {
-    let mut nested_object = Value::new_object();
-    nested_object.set("inner_value", Value::from_str("nested")).unwrap();
+    let mut nested_object = DefaultValueFactory::create_object();
+    nested_object
+        .set("inner_value", DefaultValueFactory::create_string("nested"))
+        .unwrap();
 
-    let mut main_object = Value::new_object();
-    main_object.set("simple", Value::from_str("value")).unwrap();
+    let mut main_object = DefaultValueFactory::create_object();
+    main_object
+        .set("simple", DefaultValueFactory::create_string("value"))
+        .unwrap();
     main_object.set("nested", nested_object).unwrap();
-    main_object.set("number", Value::from_number(42.0).unwrap()).unwrap();
+    main_object
+        .set("number", DefaultValueFactory::create_number(42.0).unwrap())
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(main_object).unwrap();
     let collected = iterator.collect();
@@ -528,9 +606,14 @@ fn test_object_iterator_nested_objects() {
 
 #[test]
 fn test_object_iterator_large_object() {
-    let mut large_object = Value::new_object();
+    let mut large_object = DefaultValueFactory::create_object();
     for i in 0..100 {
-        large_object.set(&format!("property_{:03}", i), Value::from_number(i as f64).unwrap()).unwrap();
+        large_object
+            .set(
+                &format!("property_{:03}", i),
+                DefaultValueFactory::create_number(i as f64).unwrap(),
+            )
+            .unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_object_iterator(large_object).unwrap();
@@ -543,39 +626,65 @@ fn test_object_iterator_large_object() {
     assert!(duration.as_millis() < 100);
 
     let mut iterator2 = DefaultIteratorFactory::create_object_iterator({
-        let mut obj = Value::new_object();
+        let mut obj = DefaultValueFactory::create_object();
         for i in 0..100 {
-            obj.set(&format!("property_{:03}", i), Value::from_number(i as f64).unwrap()).unwrap();
+            obj.set(
+                &format!("property_{:03}", i),
+                DefaultValueFactory::create_number(i as f64).unwrap(),
+            )
+            .unwrap();
         }
         obj
-    }).unwrap();
+    })
+    .unwrap();
 
-    let filtered = iterator2.filter(|key, _value| {
-        key.contains("09")
-    });
+    let filtered = iterator2.filter(|key, _value| key.contains("09"));
 
     assert_eq!(filtered.len(), 11);
 
-    println!("✅ Object iterator large object test passed in {:?}", duration);
+    println!(
+        "✅ Object iterator large object test passed in {:?}",
+        duration
+    );
 }
 
 #[test]
 fn test_iterator_complex_predicate_operations() {
-    let mut array = Value::new_array();
+    let mut array = DefaultValueFactory::create_array();
     for i in 1..=20 {
-        let mut item = Value::new_object();
-        item.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        item.set("name", Value::from_str(&format!("Item {}", i))).unwrap();
-        item.set("active", Value::from_bool(i % 3 == 0)).unwrap();
-        item.set("score", Value::from_number((i * 5) as f64).unwrap()).unwrap();
+        let mut item = DefaultValueFactory::create_object();
+        item.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        item.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("Item {}", i)),
+        )
+        .unwrap();
+        item.set("active", DefaultValueFactory::create_bool(i % 3 == 0))
+            .unwrap();
+        item.set(
+            "score",
+            DefaultValueFactory::create_number((i * 5) as f64).unwrap(),
+        )
+        .unwrap();
         array.push(item).unwrap();
     }
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array.clone()).unwrap();
 
     let high_score_active = iterator.find(|item| {
-        let score = item.get("score").unwrap().unwrap().as_number().unwrap_or(0.0);
-        let active = item.get("active").unwrap().unwrap().as_bool().unwrap_or(false);
+        let score = item
+            .get("score")
+            .unwrap()
+            .unwrap()
+            .as_number()
+            .unwrap_or(0.0);
+        let active = item
+            .get("active")
+            .unwrap()
+            .unwrap()
+            .as_bool()
+            .unwrap_or(false);
         score > 50.0 && active
     });
 
@@ -588,7 +697,12 @@ fn test_iterator_complex_predicate_operations() {
 
     let filtered_complex = iterator2.filter(|item| {
         let id = item.get("id").unwrap().unwrap().as_number().unwrap_or(0.0);
-        let score = item.get("score").unwrap().unwrap().as_number().unwrap_or(0.0);
+        let score = item
+            .get("score")
+            .unwrap()
+            .unwrap()
+            .as_number()
+            .unwrap_or(0.0);
         id > 10.0 && score % 15.0 == 0.0
     });
 
@@ -597,9 +711,14 @@ fn test_iterator_complex_predicate_operations() {
 
 #[test]
 fn test_iterator_chaining_operations() {
-    let mut object = Value::new_object();
+    let mut object = DefaultValueFactory::create_object();
     for i in 1..=10 {
-        object.set(&format!("item_{}", i), Value::from_number(i as f64).unwrap()).unwrap();
+        object
+            .set(
+                &format!("item_{}", i),
+                DefaultValueFactory::create_number(i as f64).unwrap(),
+            )
+            .unwrap();
     }
 
     let mut iterator1 = DefaultIteratorFactory::create_object_iterator(object).unwrap();
@@ -609,7 +728,7 @@ fn test_iterator_chaining_operations() {
         num % 2.0 == 0.0
     });
 
-    let mut array_from_filtered = Value::new_array();
+    let mut array_from_filtered = DefaultValueFactory::create_array();
     for (_key, value) in filtered {
         array_from_filtered.push(value).unwrap();
     }
@@ -632,11 +751,15 @@ fn test_iterator_chaining_operations() {
 
 #[test]
 fn test_iterator_memory_efficiency() {
-    let mut large_array = Value::new_array();
+    let mut large_array = DefaultValueFactory::create_array();
     for i in 0..1000 {
-        let mut complex_item = Value::new_object();
-        complex_item.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        complex_item.set("data", Value::from_str(&"x".repeat(100))).unwrap();
+        let mut complex_item = DefaultValueFactory::create_object();
+        complex_item
+            .set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        complex_item
+            .set("data", DefaultValueFactory::create_string(&"x".repeat(100)))
+            .unwrap();
         large_array.push(complex_item).unwrap();
     }
 
@@ -666,14 +789,20 @@ fn test_iterator_memory_efficiency() {
     assert_eq!(*batch_count.lock().unwrap(), 20);
 
     println!("✅ Iterator memory efficiency test passed");
-    println!("   Processed {} items in {} batches", processed_count, *batch_count.lock().unwrap());
+    println!(
+        "   Processed {} items in {} batches",
+        processed_count,
+        *batch_count.lock().unwrap()
+    );
 }
 
 #[test]
 fn test_iterator_performance_stress() {
-    let mut large_array = Value::new_array();
+    let mut large_array = DefaultValueFactory::create_array();
     for i in 0..5000 {
-        large_array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        large_array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let start = std::time::Instant::now();
@@ -708,30 +837,36 @@ fn test_iterator_performance_stress() {
     assert!(filtered.len() > 0);
     assert!(duration.as_millis() < 1000);
 
-    println!("✅ Iterator performance stress test passed in {:?}", duration);
-    println!("   Processed 5000 elements, found {} primes", filtered.len());
+    println!(
+        "✅ Iterator performance stress test passed in {:?}",
+        duration
+    );
+    println!(
+        "   Processed 5000 elements, found {} primes",
+        filtered.len()
+    );
 }
 
 #[test]
 fn test_iterator_concurrent_safety() {
-    let mut array1 = Value::new_array();
-    let mut array2 = Value::new_array();
+    let mut array1 = DefaultValueFactory::create_array();
+    let mut array2 = DefaultValueFactory::create_array();
 
     for i in 0..100 {
-        array1.push(Value::from_number(i as f64).unwrap()).unwrap();
-        array2.push(Value::from_number((i * 2) as f64).unwrap()).unwrap();
+        array1
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        array2
+            .push(DefaultValueFactory::create_number((i * 2) as f64).unwrap())
+            .unwrap();
     }
 
     // Sequential processing (simulating concurrent safety)
     let mut iter1 = DefaultIteratorFactory::create_array_iterator(array1).unwrap();
-    let result1 = iter1.filter(|item| {
-        item.as_number().unwrap_or(0.0) % 10.0 == 0.0
-    });
+    let result1 = iter1.filter(|item| item.as_number().unwrap_or(0.0) % 10.0 == 0.0);
 
     let mut iter2 = DefaultIteratorFactory::create_array_iterator(array2).unwrap();
-    let result2 = iter2.map(|item| {
-        item.as_number().unwrap_or(0.0) / 2.0
-    });
+    let result2 = iter2.map(|item| item.as_number().unwrap_or(0.0) / 2.0);
 
     assert_eq!(result1.len(), 10);
     assert_eq!(result2.len(), 100);
@@ -747,8 +882,10 @@ fn test_iterator_concurrent_safety() {
 #[test]
 fn test_iterator_edge_cases_and_boundaries() {
     // Test Case 1: Array con un solo elemento
-    let mut single_item_array = Value::new_array();
-    single_item_array.push(Value::from_str("only_one")).unwrap();
+    let mut single_item_array = DefaultValueFactory::create_array();
+    single_item_array
+        .push(DefaultValueFactory::create_string("only_one"))
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(single_item_array).unwrap();
     assert_eq!(iterator.size_hint(), (1, Some(1)));
@@ -756,10 +893,16 @@ fn test_iterator_edge_cases_and_boundaries() {
     assert!(iterator.next().is_none());
 
     // Test Case 2: Object con una sola propiedad
-    let mut single_prop_object = Value::new_object();
-    single_prop_object.set("only_prop", Value::from_str("only_value")).unwrap();
+    let mut single_prop_object = DefaultValueFactory::create_object();
+    single_prop_object
+        .set(
+            "only_prop",
+            DefaultValueFactory::create_string("only_value"),
+        )
+        .unwrap();
 
-    let mut obj_iterator = DefaultIteratorFactory::create_object_iterator(single_prop_object).unwrap();
+    let mut obj_iterator =
+        DefaultIteratorFactory::create_object_iterator(single_prop_object).unwrap();
     assert_eq!(obj_iterator.size_hint(), (1, Some(1)));
     let pair = obj_iterator.next();
     assert!(pair.is_some());
@@ -768,9 +911,13 @@ fn test_iterator_edge_cases_and_boundaries() {
     assert_eq!(value.as_str().unwrap(), "only_value");
 
     // Test Case 3: nth con índice 0
-    let mut test_array = Value::new_array();
-    test_array.push(Value::from_str("first")).unwrap();
-    test_array.push(Value::from_str("second")).unwrap();
+    let mut test_array = DefaultValueFactory::create_array();
+    test_array
+        .push(DefaultValueFactory::create_string("first"))
+        .unwrap();
+    test_array
+        .push(DefaultValueFactory::create_string("second"))
+        .unwrap();
 
     let mut nth_iterator = DefaultIteratorFactory::create_array_iterator(test_array).unwrap();
     let zeroth_element = nth_iterator.nth(0);
@@ -778,14 +925,16 @@ fn test_iterator_edge_cases_and_boundaries() {
     assert_eq!(zeroth_element.unwrap().as_str().unwrap(), "first");
 
     // Test Case 4: Map con función que retorna diferentes tipos
-    let mut mixed_array = Value::new_array();
-    mixed_array.push(Value::from_number(5.0).unwrap()).unwrap();
-    mixed_array.push(Value::from_number(10.0).unwrap()).unwrap();
+    let mut mixed_array = DefaultValueFactory::create_array();
+    mixed_array
+        .push(DefaultValueFactory::create_number(5.0).unwrap())
+        .unwrap();
+    mixed_array
+        .push(DefaultValueFactory::create_number(10.0).unwrap())
+        .unwrap();
 
     let mut map_iterator = DefaultIteratorFactory::create_array_iterator(mixed_array).unwrap();
-    let mapped_bools: Vec<bool> = map_iterator.map(|item| {
-        item.as_number().unwrap_or(0.0) > 7.0
-    });
+    let mapped_bools: Vec<bool> = map_iterator.map(|item| item.as_number().unwrap_or(0.0) > 7.0);
 
     assert_eq!(mapped_bools.len(), 2);
     assert_eq!(mapped_bools[0], false);
@@ -796,28 +945,42 @@ fn test_iterator_edge_cases_and_boundaries() {
 
 #[test]
 fn test_iterator_error_resilience() {
-    let mut array_with_issues = Value::new_array();
-    array_with_issues.push(Value::from_number(10.0).unwrap()).unwrap();
-    array_with_issues.push(Value::from_str("not_a_number")).unwrap();
-    array_with_issues.push(Value::from_number(20.0).unwrap()).unwrap();
-    array_with_issues.push(Value::from_bool(true)).unwrap();
-    array_with_issues.push(Value::from_number(30.0).unwrap()).unwrap();
+    let mut array_with_issues = DefaultValueFactory::create_array();
+    array_with_issues
+        .push(DefaultValueFactory::create_number(10.0).unwrap())
+        .unwrap();
+    array_with_issues
+        .push(DefaultValueFactory::create_string("not_a_number"))
+        .unwrap();
+    array_with_issues
+        .push(DefaultValueFactory::create_number(20.0).unwrap())
+        .unwrap();
+    array_with_issues
+        .push(DefaultValueFactory::create_bool(true))
+        .unwrap();
+    array_with_issues
+        .push(DefaultValueFactory::create_number(30.0).unwrap())
+        .unwrap();
 
     let mut iterator = DefaultIteratorFactory::create_array_iterator(array_with_issues).unwrap();
 
-    let valid_numbers = iterator.filter(|item| {
-        item.as_number().is_some()
-    });
+    let valid_numbers = iterator.filter(|item| item.as_number().is_some());
 
     assert_eq!(valid_numbers.len(), 3);
     assert_eq!(valid_numbers[0].as_number().unwrap(), 10.0);
     assert_eq!(valid_numbers[1].as_number().unwrap(), 20.0);
     assert_eq!(valid_numbers[2].as_number().unwrap(), 30.0);
 
-    let mut array_for_map = Value::new_array();
-    array_for_map.push(Value::from_str("123")).unwrap();
-    array_for_map.push(Value::from_str("not_numeric")).unwrap();
-    array_for_map.push(Value::from_str("456")).unwrap();
+    let mut array_for_map = DefaultValueFactory::create_array();
+    array_for_map
+        .push(DefaultValueFactory::create_string("123"))
+        .unwrap();
+    array_for_map
+        .push(DefaultValueFactory::create_string("not_numeric"))
+        .unwrap();
+    array_for_map
+        .push(DefaultValueFactory::create_string("456"))
+        .unwrap();
 
     let mut map_iterator = DefaultIteratorFactory::create_array_iterator(array_for_map).unwrap();
 
@@ -840,14 +1003,22 @@ fn test_iterators_with_model_manager_integration() {
     let mut manager = DefaultModelManager::create();
 
     for i in 1..=5 {
-        let mut user = Value::new_object();
-        user.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        user.set("name", Value::from_str(&format!("User {}", i))).unwrap();
-        user.set("active", Value::from_bool(i % 2 == 0)).unwrap();
+        let mut user = DefaultValueFactory::create_object();
+        user.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        user.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("User {}", i)),
+        )
+        .unwrap();
+        user.set("active", DefaultValueFactory::create_bool(i % 2 == 0))
+            .unwrap();
 
-        let mut tags = Value::new_array();
-        tags.push(Value::from_str("tag1")).unwrap();
-        tags.push(Value::from_str(&format!("tag_{}", i))).unwrap();
+        let mut tags = DefaultValueFactory::create_array();
+        tags.push(DefaultValueFactory::create_string("tag1"))
+            .unwrap();
+        tags.push(DefaultValueFactory::create_string(&format!("tag_{}", i)))
+            .unwrap();
         user.set("tags", tags).unwrap();
 
         manager.insert("users".to_string(), None, user).unwrap();
@@ -855,7 +1026,7 @@ fn test_iterators_with_model_manager_integration() {
 
     let users = manager.get_all("users".to_string()).unwrap();
 
-    let mut users_array = Value::new_array();
+    let mut users_array = DefaultValueFactory::create_array();
     for user in users {
         users_array.push(user).unwrap();
     }
@@ -863,13 +1034,18 @@ fn test_iterators_with_model_manager_integration() {
     let mut array_iterator = DefaultIteratorFactory::create_array_iterator(users_array).unwrap();
 
     let active_users = array_iterator.filter(|user| {
-        user.get("active").unwrap().unwrap().as_bool().unwrap_or(false)
+        user.get("active")
+            .unwrap()
+            .unwrap()
+            .as_bool()
+            .unwrap_or(false)
     });
 
     assert_eq!(active_users.len(), 2);
 
     let first_user = &active_users[0];
-    let mut object_iterator = DefaultIteratorFactory::create_object_iterator(first_user.clone()).unwrap();
+    let mut object_iterator =
+        DefaultIteratorFactory::create_object_iterator(first_user.clone()).unwrap();
 
     let properties = object_iterator.collect();
     assert!(properties.len() >= 4);
@@ -888,9 +1064,11 @@ fn test_comprehensive_iterator_benchmarks() {
     println!("=== COMPREHENSIVE ITERATOR PERFORMANCE BENCHMARKS ===");
 
     // Benchmark 1: Array Iterator Operations
-    let mut benchmark_array = Value::new_array();
+    let mut benchmark_array = DefaultValueFactory::create_array();
     for i in 0..1000 {
-        benchmark_array.push(Value::from_number(i as f64).unwrap()).unwrap();
+        benchmark_array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
     }
 
     let start = std::time::Instant::now();
@@ -905,37 +1083,54 @@ fn test_comprehensive_iterator_benchmarks() {
 
     let start = std::time::Instant::now();
     let mut iter3 = DefaultIteratorFactory::create_array_iterator(benchmark_array).unwrap();
-    let filter_result = iter3.filter(|item| {
-        item.as_number().unwrap_or(0.0) % 10.0 == 0.0
-    });
+    let filter_result = iter3.filter(|item| item.as_number().unwrap_or(0.0) % 10.0 == 0.0);
     let filter_duration = start.elapsed();
 
     println!("Array Iterator Benchmarks (1000 elements):");
     println!("  Count: {} items in {:?}", count_result, count_duration);
-    println!("  Collect: {} items in {:?}", collect_result.len(), collect_duration);
-    println!("  Filter: {} items in {:?}", filter_result.len(), filter_duration);
+    println!(
+        "  Collect: {} items in {:?}",
+        collect_result.len(),
+        collect_duration
+    );
+    println!(
+        "  Filter: {} items in {:?}",
+        filter_result.len(),
+        filter_duration
+    );
 
     // Benchmark 2: Object Iterator Operations
-    let mut benchmark_object = Value::new_object();
+    let mut benchmark_object = DefaultValueFactory::create_object();
     for i in 0..500 {
-        benchmark_object.set(&format!("property_{:03}", i), Value::from_str(&format!("value_{}", i))).unwrap();
+        benchmark_object
+            .set(
+                &format!("property_{:03}", i),
+                DefaultValueFactory::create_string(&format!("value_{}", i)),
+            )
+            .unwrap();
     }
 
     let start = std::time::Instant::now();
-    let mut obj_iter1 = DefaultIteratorFactory::create_object_iterator(benchmark_object.clone()).unwrap();
+    let mut obj_iter1 =
+        DefaultIteratorFactory::create_object_iterator(benchmark_object.clone()).unwrap();
     let obj_count_result = obj_iter1.count();
     let obj_count_duration = start.elapsed();
 
     let start = std::time::Instant::now();
     let mut obj_iter2 = DefaultIteratorFactory::create_object_iterator(benchmark_object).unwrap();
-    let obj_filter_result = obj_iter2.filter(|key, _value| {
-        key.contains("0")
-    });
+    let obj_filter_result = obj_iter2.filter(|key, _value| key.contains("0"));
     let obj_filter_duration = start.elapsed();
 
     println!("Object Iterator Benchmarks (500 properties):");
-    println!("  Count: {} properties in {:?}", obj_count_result, obj_count_duration);
-    println!("  Filter: {} properties in {:?}", obj_filter_result.len(), obj_filter_duration);
+    println!(
+        "  Count: {} properties in {:?}",
+        obj_count_result, obj_count_duration
+    );
+    println!(
+        "  Filter: {} properties in {:?}",
+        obj_filter_result.len(),
+        obj_filter_duration
+    );
 
     // Performance assertions
     assert!(count_duration.as_millis() < 100);

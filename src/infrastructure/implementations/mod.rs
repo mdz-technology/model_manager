@@ -3,3 +3,7 @@ pub mod serde_dynamic_value;
 pub mod json_converter;
 pub mod object_iterator;
 pub mod array_iterator;
+pub mod serde_core_value;
+pub mod serde_path_navigation;
+pub mod serde_introspection;
+pub mod serde_analysis;

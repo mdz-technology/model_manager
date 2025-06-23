@@ -1,5 +1,5 @@
 use crate::application::iterators::object_iterator::ObjectIterator;
-use crate::infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;
+use crate::infrastructure::implementations::serde_core_value::SerdeCoreValue;
 use serde_json::{Map, Value};
 use std::collections::btree_map::IntoIter;
 
@@ -24,12 +24,12 @@ impl SerdeObjectIterator {
 }
 
 impl ObjectIterator for SerdeObjectIterator {
-    type Item = SerdeDynamicValue;
+    type Item = SerdeCoreValue;
 
     fn next(&mut self) -> Option<(String, Self::Item)> {
         if let Some((key, value)) = self.inner.next() {
             self.current_index += 1;
-            Some((key, SerdeDynamicValue::from_value(value)))
+            Some((key, SerdeCoreValue::from_serde_value(value)))
         } else {
             None
         }
@@ -44,7 +44,7 @@ impl ObjectIterator for SerdeObjectIterator {
         while let Some((key, value)) = self.inner.next() {
             self.current_index += 1;
             if key == target_key {
-                return Some(SerdeDynamicValue::from_value(value));
+                return Some(SerdeCoreValue::from_serde_value(value));
             }
         }
         None
@@ -61,7 +61,7 @@ impl ObjectIterator for SerdeObjectIterator {
 
         while let Some((key, value)) = self.inner.next() {
             self.current_index += 1;
-            results.push((key, SerdeDynamicValue::from_value(value)));
+            results.push((key, SerdeCoreValue::from_serde_value(value)));
         }
 
         results
@@ -74,7 +74,7 @@ impl ObjectIterator for SerdeObjectIterator {
         let mut results = Vec::new();
         while let Some((key, value)) = self.inner.next() {
             self.current_index += 1;
-            let item = SerdeDynamicValue::from_value(value);
+            let item = SerdeCoreValue::from_serde_value(value);
 
             if predicate(&key, &item) {
                 results.push((key, item));
@@ -92,7 +92,7 @@ impl ObjectIterator for SerdeObjectIterator {
         let mut results = Vec::new();
         while let Some((key, value)) = self.inner.next() {
             self.current_index += 1;
-            let item = SerdeDynamicValue::from_value(value);
+            let item = SerdeCoreValue::from_serde_value(value);
             let mapped_value = mapper(key.clone(), item);
             results.push((key, mapped_value));
         }

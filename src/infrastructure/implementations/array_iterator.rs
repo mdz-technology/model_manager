@@ -1,5 +1,5 @@
 use crate::application::iterators::array_iterator::ArrayIterator;
-use crate::infrastructure::implementations::serde_dynamic_value::SerdeDynamicValue;
+use crate::infrastructure::implementations::serde_core_value::SerdeCoreValue;
 use serde_json::Value;
 use std::vec::IntoIter;
 
@@ -23,12 +23,12 @@ impl SerdeArrayIterator {
 }
 
 impl ArrayIterator for SerdeArrayIterator {
-    type Item = SerdeDynamicValue;
+    type Item = SerdeCoreValue;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(value) = self.inner.next() {
             self.current_index += 1;
-            Some(SerdeDynamicValue::from_value(value))
+            Some(SerdeCoreValue::from_serde_value(value))
         } else {
             None
         }
@@ -42,7 +42,7 @@ impl ArrayIterator for SerdeArrayIterator {
     fn nth(&mut self, target_n: usize) -> Option<Self::Item> {
         if let Some(value) = self.inner.nth(target_n) {
             self.current_index += target_n + 1;
-            Some(SerdeDynamicValue::from_value(value))
+            Some(SerdeCoreValue::from_serde_value(value))
         } else {
             self.current_index = self.total_size;
             None
@@ -60,7 +60,7 @@ impl ArrayIterator for SerdeArrayIterator {
 
         while let Some(value) = self.inner.next() {
             self.current_index += 1;
-            results.push(SerdeDynamicValue::from_value(value));
+            results.push(SerdeCoreValue::from_serde_value(value));
         }
 
         results
@@ -72,7 +72,7 @@ impl ArrayIterator for SerdeArrayIterator {
     {
         while let Some(value) = self.inner.next() {
             self.current_index += 1;
-            let item = SerdeDynamicValue::from_value(value);
+            let item = SerdeCoreValue::from_serde_value(value);
 
             if predicate(&item) {
                 return Some(item);
@@ -88,7 +88,7 @@ impl ArrayIterator for SerdeArrayIterator {
         let mut results = Vec::new();
         while let Some(value) = self.inner.next() {
             self.current_index += 1;
-            let item = SerdeDynamicValue::from_value(value);
+            let item = SerdeCoreValue::from_serde_value(value);
 
             if predicate(&item) {
                 results.push(item);
@@ -106,7 +106,7 @@ impl ArrayIterator for SerdeArrayIterator {
         let mut results = Vec::new();
         while let Some(value) = self.inner.next() {
             self.current_index += 1;
-            let item = SerdeDynamicValue::from_value(value);
+            let item = SerdeCoreValue::from_serde_value(value);
             let mapped_value = mapper(item);
             results.push(mapped_value);
         }
@@ -123,7 +123,7 @@ impl ArrayIterator for SerdeArrayIterator {
 
         while let Some(value) = self.inner.next() {
             self.current_index += 1;
-            let item = SerdeDynamicValue::from_value(value);
+            let item = SerdeCoreValue::from_serde_value(value);
             current_batch.push(item);
 
             if current_batch.len() == batch_size {

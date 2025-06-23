@@ -1,11 +1,10 @@
-use std::time::Instant;
 use model_manager::{
-    DynamicValue, ModelManager, DefaultValue, ModelManagerFactory,
-    DynamicValueFactory, DefaultModelManager
+    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
+    ValueFactory,
 };
+use std::time::Instant;
 
-type Value = <DefaultValue as DynamicValueFactory>::Value;
-type Manager = <DefaultModelManager as ModelManagerFactory<Value>>::Manager;
+type Value = <DefaultValueFactory as ValueFactory>::Value;
 
 #[test]
 fn test_performance_single_operations() {
@@ -15,10 +14,19 @@ fn test_performance_single_operations() {
 
     let mut insert_times = Vec::new();
     for i in 0..1000 {
-        let mut data = Value::new_object();
-        data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        data.set("name", Value::from_str(&format!("User {}", i))).unwrap();
-        data.set("email", Value::from_str(&format!("user{}@test.com", i))).unwrap();
+        let mut data = DefaultValueFactory::create_object();
+        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        data.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("User {}", i)),
+        )
+        .unwrap();
+        data.set(
+            "email",
+            DefaultValueFactory::create_string(&format!("user{}@test.com", i)),
+        )
+        .unwrap();
 
         let start = Instant::now();
         let result = manager.insert("perf_users".to_string(), None, data);
@@ -48,11 +56,22 @@ fn test_performance_single_operations() {
     }
 
     let avg_get_time = get_times.iter().sum::<u128>() / get_times.len() as u128;
-    println!("GET_ALL Performance (100 operations, {} records):", all_users.len());
+    println!(
+        "GET_ALL Performance (100 operations, {} records):",
+        all_users.len()
+    );
     println!("  Average: {}μs", avg_get_time);
 
-    assert!(avg_insert_time < 5000, "Insert too slow: {}μs > 5000μs", avg_insert_time);
-    assert!(avg_get_time < 10000, "Get all too slow: {}μs > 10000μs", avg_get_time);
+    assert!(
+        avg_insert_time < 5000,
+        "Insert too slow: {}μs > 5000μs",
+        avg_insert_time
+    );
+    assert!(
+        avg_get_time < 10000,
+        "Get all too slow: {}μs > 10000μs",
+        avg_get_time
+    );
 }
 
 #[test]
@@ -63,17 +82,26 @@ fn test_performance_bulk_operations() {
 
     let start = Instant::now();
     for i in 0..10000 {
-        let mut data = Value::new_object();
-        data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        data.set("name", Value::from_str(&format!("BulkUser {}", i))).unwrap();
-        data.set("category", Value::from_str(match i % 5 {
-            0 => "A",
-            1 => "B",
-            2 => "C",
-            3 => "D",
-            4 => "E",
-            _ => unreachable!(),
-        })).unwrap();
+        let mut data = DefaultValueFactory::create_object();
+        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        data.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("BulkUser {}", i)),
+        )
+        .unwrap();
+        data.set(
+            "category",
+            Value::from_str(match i % 5 {
+                0 => "A",
+                1 => "B",
+                2 => "C",
+                3 => "D",
+                4 => "E",
+                _ => unreachable!(),
+            }),
+        )
+        .unwrap();
 
         let result = manager.insert("bulk_users".to_string(), None, data);
         assert!(result.is_ok());
@@ -95,8 +123,16 @@ fn test_performance_bulk_operations() {
     let all_users = manager.get_all("bulk_users".to_string()).unwrap();
     assert_eq!(all_users.len(), 10000);
 
-    assert!(total_ops_per_sec > 1000.0, "Bulk insert too slow: {:.0} ops/sec < 1000 ops/sec", total_ops_per_sec);
-    assert!(total_duration.as_secs() < 30, "Bulk insert took too long: {:?} > 30s", total_duration);
+    assert!(
+        total_ops_per_sec > 1000.0,
+        "Bulk insert too slow: {:.0} ops/sec < 1000 ops/sec",
+        total_ops_per_sec
+    );
+    assert!(
+        total_duration.as_secs() < 30,
+        "Bulk insert took too long: {:?} > 30s",
+        total_duration
+    );
 }
 
 #[test]
@@ -112,14 +148,33 @@ fn test_performance_multiple_models() {
 
     for (model_idx, model_name) in models.iter().enumerate() {
         for i in 0..operations_per_model {
-            let mut data = Value::new_object();
-            data.set("model_id", Value::from_number(model_idx as f64).unwrap()).unwrap();
-            data.set("record_id", Value::from_number(i as f64).unwrap()).unwrap();
-            data.set("name", Value::from_str(&format!("{}_record_{}", model_name, i))).unwrap();
-            data.set("timestamp", Value::from_number(std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as f64).unwrap()).unwrap();
+            let mut data = DefaultValueFactory::create_object();
+            data.set(
+                "model_id",
+                DefaultValueFactory::create_number(model_idx as f64).unwrap(),
+            )
+            .unwrap();
+            data.set(
+                "record_id",
+                DefaultValueFactory::create_number(i as f64).unwrap(),
+            )
+            .unwrap();
+            data.set(
+                "name",
+                DefaultValueFactory::create_string(&format!("{}_record_{}", model_name, i)),
+            )
+            .unwrap();
+            data.set(
+                "timestamp",
+                DefaultValueFactory::create_number(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as f64,
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
             let result = manager.insert(model_name.to_string(), None, data);
             assert!(result.is_ok());
@@ -128,8 +183,10 @@ fn test_performance_multiple_models() {
         let elapsed = start.elapsed();
         let total_ops = (model_idx + 1) * operations_per_model;
         let ops_per_sec = (total_ops as f64) / elapsed.as_secs_f64();
-        println!("  Model '{}' completed: {} total ops, {:.0} ops/sec",
-                 model_name, total_ops, ops_per_sec);
+        println!(
+            "  Model '{}' completed: {} total ops, {:.0} ops/sec",
+            model_name, total_ops, ops_per_sec
+        );
     }
 
     let total_duration = start.elapsed();
@@ -144,12 +201,21 @@ fn test_performance_multiple_models() {
 
     for model_name in &models {
         let records = manager.get_all(model_name.to_string()).unwrap();
-        assert_eq!(records.len(), operations_per_model,
-                   "Model '{}' should have {} records, got {}",
-                   model_name, operations_per_model, records.len());
+        assert_eq!(
+            records.len(),
+            operations_per_model,
+            "Model '{}' should have {} records, got {}",
+            model_name,
+            operations_per_model,
+            records.len()
+        );
     }
 
-    assert!(total_ops_per_sec > 800.0, "Multi-model too slow: {:.0} ops/sec < 800 ops/sec", total_ops_per_sec);
+    assert!(
+        total_ops_per_sec > 800.0,
+        "Multi-model too slow: {:.0} ops/sec < 800 ops/sec",
+        total_ops_per_sec
+    );
 }
 
 #[test]
@@ -161,51 +227,81 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
     let start = Instant::now();
 
     for i in 0..1000 {
-        let mut complex_data = Value::new_object();
-        complex_data.set("id", Value::from_number(i as f64)?)?;
-        complex_data.set("title", Value::from_str(&format!("Complex Record {}", i)))?;
+        let mut complex_data = DefaultValueFactory::create_object();
+        complex_data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())?;
+        complex_data.set(
+            "title",
+            DefaultValueFactory::create_string(&format!("Complex Record {}", i)),
+        )?;
 
-        let mut user = Value::new_object();
-        user.set("name", Value::from_str(&format!("User {}", i)))?;
-        user.set("email", Value::from_str(&format!("user{}@complex.com", i)))?;
-        user.set("active", Value::from_bool(i % 2 == 0))?;
+        let mut user = DefaultValueFactory::create_object();
+        user.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("User {}", i)),
+        )?;
+        user.set(
+            "email",
+            DefaultValueFactory::create_string(&format!("user{}@complex.com", i)),
+        )?;
+        user.set("active", DefaultValueFactory::create_bool(i % 2 == 0))?;
 
-        let mut profile = Value::new_object();
-        profile.set("age", Value::from_number(20.0 + (i % 50) as f64)?)?;
-        profile.set("department", Value::from_str(match i % 4 {
-            0 => "Engineering",
-            1 => "Sales",
-            2 => "Marketing",
-            3 => "Support",
-            _ => unreachable!(),
-        }))?;
+        let mut profile = DefaultValueFactory::create_object();
+        profile.set(
+            "age",
+            DefaultValueFactory::create_number(20.0 + (i % 50) as f64)?,
+        )?;
+        profile.set(
+            "department",
+            Value::from_str(match i % 4 {
+                0 => "Engineering",
+                1 => "Sales",
+                2 => "Marketing",
+                3 => "Support",
+                _ => unreachable!(),
+            }),
+        )?;
         user.set("profile", profile)?;
 
         complex_data.set("user", user)?;
 
-        let mut items = Value::new_array();
+        let mut items = DefaultValueFactory::create_array();
         for j in 0..10 {
-            let mut item = Value::new_object();
-            item.set("item_id", Value::from_number(j as f64)?)?;
-            item.set("value", Value::from_str(&format!("Item {}-{}", i, j)))?;
-            item.set("price", Value::from_number(10.0 + j as f64)?)?;
+            let mut item = DefaultValueFactory::create_object();
+            item.set(
+                "item_id",
+                DefaultValueFactory::create_number(j as f64).unwrap(),
+            )?;
+            item.set(
+                "value",
+                DefaultValueFactory::create_string(&format!("Item {}-{}", i, j)),
+            )?;
+            item.set(
+                "price",
+                DefaultValueFactory::create_number(10.0 + j as f64).unwrap(),
+            )?;
             items.push(item)?;
         }
         complex_data.set("items", items)?;
 
-        let mut metadata = Value::new_object();
-        metadata.set("created_at", Value::from_number(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as f64
-        )?)?;
-        metadata.set("version", Value::from_number(1.0)?)?;
+        let mut metadata = DefaultValueFactory::create_object();
+        metadata.set(
+            "created_at",
+            Value::from_number(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as f64,
+            )?,
+        )?;
+        metadata.set("version", DefaultValueFactory::create_number(1.0).unwrap())?;
         metadata.set("tags", {
-            let mut tags = Value::new_array();
-            tags.push(Value::from_str("complex"))?;
-            tags.push(Value::from_str("test"))?;
-            tags.push(Value::from_str(&format!("batch_{}", i / 100)))?;
+            let mut tags = DefaultValueFactory::create_array();
+            tags.push(DefaultValueFactory::create_string("complex"))?;
+            tags.push(DefaultValueFactory::create_string("test"))?;
+            tags.push(DefaultValueFactory::create_string(&format!(
+                "batch_{}",
+                i / 100
+            )))?;
             tags
         })?;
         complex_data.set("metadata", metadata)?;
@@ -216,7 +312,10 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
         if i % 100 == 0 && i > 0 {
             let elapsed = start.elapsed();
             let ops_per_sec = (i as f64) / elapsed.as_secs_f64();
-            println!("  Complex structures: {} processed, {:.0} ops/sec", i, ops_per_sec);
+            println!(
+                "  Complex structures: {} processed, {:.0} ops/sec",
+                i, ops_per_sec
+            );
         }
     }
 
@@ -231,7 +330,11 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
     let all_complex = manager.get_all("complex_records".to_string()).unwrap();
     let retrieval_duration = retrieval_start.elapsed();
 
-    println!("  Retrieval time: {:?} for {} records", retrieval_duration, all_complex.len());
+    println!(
+        "  Retrieval time: {:?} for {} records",
+        retrieval_duration,
+        all_complex.len()
+    );
     assert_eq!(all_complex.len(), 1000);
 
     let access_start = Instant::now();
@@ -248,11 +351,25 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
     }
 
     let access_duration = access_start.elapsed();
-    println!("  Nested access: {} accesses in {:?}", successful_accesses, access_duration);
+    println!(
+        "  Nested access: {} accesses in {:?}",
+        successful_accesses, access_duration
+    );
 
-    assert!(ops_per_sec > 100.0, "Complex data too slow: {:.0} ops/sec < 100 ops/sec", ops_per_sec);
-    assert!(retrieval_duration.as_millis() < 500, "Retrieval too slow: {:?} > 500ms", retrieval_duration);
-    assert_eq!(successful_accesses, 100, "Should access all nested data successfully");
+    assert!(
+        ops_per_sec > 100.0,
+        "Complex data too slow: {:.0} ops/sec < 100 ops/sec",
+        ops_per_sec
+    );
+    assert!(
+        retrieval_duration.as_millis() < 500,
+        "Retrieval too slow: {:?} > 500ms",
+        retrieval_duration
+    );
+    assert_eq!(
+        successful_accesses, 100,
+        "Should access all nested data successfully"
+    );
 
     Ok(())
 }
@@ -269,23 +386,25 @@ fn test_performance_memory_usage() {
         let start = Instant::now();
 
         for i in 0..size {
-            let mut data = Value::new_object();
+            let mut data = DefaultValueFactory::create_object();
 
             for field in 0..20 {
                 data.set(
                     &format!("field_{}", field),
-                    Value::from_str(&format!("value_{}_{}", i, field))
-                ).unwrap();
+                    DefaultValueFactory::create_string(&format!("value_{}_{}", i, field)),
+                )
+                .unwrap();
             }
 
-            data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-            data.set("size_category", Value::from_number(size as f64).unwrap()).unwrap();
+            data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+                .unwrap();
+            data.set(
+                "size_category",
+                DefaultValueFactory::create_number(size as f64).unwrap(),
+            )
+            .unwrap();
 
-            let result = manager.insert(
-                format!("memory_test_{}", size),
-                None,
-                data
-            );
+            let result = manager.insert(format!("memory_test_{}", size), None, data);
             assert!(result.is_ok());
         }
 
@@ -295,7 +414,10 @@ fn test_performance_memory_usage() {
         let records = manager.get_all(format!("memory_test_{}", size)).unwrap();
         assert_eq!(records.len(), size);
 
-        println!("  {} records: {:?}, {:.0} ops/sec", size, duration, ops_per_sec);
+        println!(
+            "  {} records: {:?}, {:.0} ops/sec",
+            size, duration, ops_per_sec
+        );
     }
 
     println!("  Testing data access after bulk inserts...");
@@ -322,11 +444,18 @@ fn test_performance_mixed_workload() {
     println!("=== PERFORMANCE TEST: Mixed Workload ===");
 
     for i in 0..1000 {
-        let mut data = Value::new_object();
-        data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        data.set("name", Value::from_str(&format!("Initial User {}", i))).unwrap();
+        let mut data = DefaultValueFactory::create_object();
+        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        data.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("Initial User {}", i)),
+        )
+        .unwrap();
 
-        manager.insert("mixed_users".to_string(), Some(format!("user_{}", i)), data).unwrap();
+        manager
+            .insert("mixed_users".to_string(), Some(format!("user_{}", i)), data)
+            .unwrap();
     }
 
     println!("  Pre-populated with 1000 records");
@@ -347,10 +476,22 @@ fn test_performance_mixed_workload() {
                 read_count += 1;
             }
             6..=8 => {
-                let mut new_data = Value::new_object();
-                new_data.set("id", Value::from_number((1000 + insert_count) as f64).unwrap()).unwrap();
-                new_data.set("name", Value::from_str(&format!("New User {}", insert_count))).unwrap();
-                new_data.set("created_in_mixed", Value::from_bool(true)).unwrap();
+                let mut new_data = DefaultValueFactory::create_object();
+                new_data
+                    .set(
+                        "id",
+                        DefaultValueFactory::create_number((1000 + insert_count) as f64).unwrap(),
+                    )
+                    .unwrap();
+                new_data
+                    .set(
+                        "name",
+                        DefaultValueFactory::create_string(&format!("New User {}", insert_count)),
+                    )
+                    .unwrap();
+                new_data
+                    .set("created_in_mixed", DefaultValueFactory::create_bool(true))
+                    .unwrap();
 
                 let result = manager.insert("mixed_users".to_string(), None, new_data);
                 assert!(result.is_ok());
@@ -358,15 +499,30 @@ fn test_performance_mixed_workload() {
             }
             9 => {
                 let user_id = format!("user_{}", update_count % 1000);
-                let mut update_data = Value::new_object();
-                update_data.set("name", Value::from_str(&format!("Updated User {}", update_count))).unwrap();
-                update_data.set("updated", Value::from_bool(true)).unwrap();
-                update_data.set("update_count", Value::from_number(update_count as f64).unwrap()).unwrap();
+                let mut update_data = DefaultValueFactory::create_object();
+                update_data
+                    .set(
+                        "name",
+                        DefaultValueFactory::create_string(&format!(
+                            "Updated User {}",
+                            update_count
+                        )),
+                    )
+                    .unwrap();
+                update_data
+                    .set("updated", DefaultValueFactory::create_bool(true))
+                    .unwrap();
+                update_data
+                    .set(
+                        "update_count",
+                        DefaultValueFactory::create_number(update_count as f64).unwrap(),
+                    )
+                    .unwrap();
 
                 let _result = manager.update("mixed_users".to_string(), user_id, update_data);
                 update_count += 1;
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
 
         if i % 1000 == 0 && i > 0 {
@@ -381,9 +537,21 @@ fn test_performance_mixed_workload() {
 
     println!("MIXED WORKLOAD Performance:");
     println!("  Total operations: {}", total_operations);
-    println!("  Reads: {} ({}%)", read_count, (read_count * 100) / total_operations);
-    println!("  Inserts: {} ({}%)", insert_count, (insert_count * 100) / total_operations);
-    println!("  Updates: {} ({}%)", update_count, (update_count * 100) / total_operations);
+    println!(
+        "  Reads: {} ({}%)",
+        read_count,
+        (read_count * 100) / total_operations
+    );
+    println!(
+        "  Inserts: {} ({}%)",
+        insert_count,
+        (insert_count * 100) / total_operations
+    );
+    println!(
+        "  Updates: {} ({}%)",
+        update_count,
+        (update_count * 100) / total_operations
+    );
     println!("  Total time: {:?}", total_duration);
     println!("  Overall throughput: {:.0} ops/sec", total_ops_per_sec);
 
@@ -391,9 +559,17 @@ fn test_performance_mixed_workload() {
     let expected_final_count = 1000 + insert_count;
     assert_eq!(final_users.len(), expected_final_count);
 
-    println!("  Final record count: {} (expected: {})", final_users.len(), expected_final_count);
+    println!(
+        "  Final record count: {} (expected: {})",
+        final_users.len(),
+        expected_final_count
+    );
 
-    assert!(total_ops_per_sec > 500.0, "Mixed workload too slow: {:.0} ops/sec < 500 ops/sec", total_ops_per_sec);
+    assert!(
+        total_ops_per_sec > 500.0,
+        "Mixed workload too slow: {:.0} ops/sec < 500 ops/sec",
+        total_ops_per_sec
+    );
 }
 
 #[test]
@@ -402,10 +578,19 @@ fn test_performance_detailed_benchmarks() {
 
     println!("=== DETAILED PERFORMANCE BENCHMARKS ===");
 
-    let mut test_data = Value::new_object();
-    test_data.set("name", Value::from_str("Benchmark User")).unwrap();
-    test_data.set("email", Value::from_str("bench@test.com")).unwrap();
-    test_data.set("active", Value::from_bool(true)).unwrap();
+    let mut test_data = DefaultValueFactory::create_object();
+    test_data
+        .set("name", DefaultValueFactory::create_string("Benchmark User"))
+        .unwrap();
+    test_data
+        .set(
+            "email",
+            DefaultValueFactory::create_string("bench@test.com"),
+        )
+        .unwrap();
+    test_data
+        .set("active", DefaultValueFactory::create_bool(true))
+        .unwrap();
 
     let mut insert_times = Vec::new();
     let start = Instant::now();
@@ -445,14 +630,25 @@ fn test_performance_detailed_benchmarks() {
     let get_total_duration = get_start.elapsed();
     let avg_get_time = get_times.iter().sum::<u128>() / get_times.len() as u128;
 
-    println!("BENCHMARK: Get All ({} records, 50 iterations)", record_count);
+    println!(
+        "BENCHMARK: Get All ({} records, 50 iterations)",
+        record_count
+    );
     println!("  Total time: {:?}", get_total_duration);
     println!("  Average: {}μs", avg_get_time);
     println!("  Min: {}μs", get_times.iter().min().unwrap());
     println!("  Max: {}μs", get_times.iter().max().unwrap());
 
-    assert!(avg_insert_time < 10000, "Detailed insert benchmark too slow: {}μs > 10000μs", avg_insert_time);
-    assert!(avg_get_time < 50000, "Detailed get benchmark too slow: {}μs > 50000μs", avg_get_time);
+    assert!(
+        avg_insert_time < 10000,
+        "Detailed insert benchmark too slow: {}μs > 10000μs",
+        avg_insert_time
+    );
+    assert!(
+        avg_get_time < 50000,
+        "Detailed get benchmark too slow: {}μs > 50000μs",
+        avg_get_time
+    );
 
     println!("=== BENCHMARKS COMPLETED ===");
 }
@@ -464,27 +660,61 @@ fn test_performance_update_operations() {
     println!("=== PERFORMANCE TEST: Update Operations ===");
 
     for i in 0..1000 {
-        let mut data = Value::new_object();
-        data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        data.set("name", Value::from_str(&format!("User {}", i))).unwrap();
-        data.set("version", Value::from_number(1.0).unwrap()).unwrap();
+        let mut data = DefaultValueFactory::create_object();
+        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        data.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("User {}", i)),
+        )
+        .unwrap();
+        data.set("version", DefaultValueFactory::create_number(1.0).unwrap())
+            .unwrap();
 
-        manager.insert("update_users".to_string(), Some(format!("user_{}", i)), data).unwrap();
+        manager
+            .insert(
+                "update_users".to_string(),
+                Some(format!("user_{}", i)),
+                data,
+            )
+            .unwrap();
     }
 
     let mut update_times = Vec::new();
 
     for i in 0..1000 {
-        let mut updated_data = Value::new_object();
-        updated_data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        updated_data.set("name", Value::from_str(&format!("Updated User {}", i))).unwrap();
-        updated_data.set("version", Value::from_number(2.0).unwrap()).unwrap();
-        updated_data.set("last_modified", Value::from_number(
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as f64
-        ).unwrap()).unwrap();
+        let mut updated_data = DefaultValueFactory::create_object();
+        updated_data
+            .set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        updated_data
+            .set(
+                "name",
+                DefaultValueFactory::create_string(&format!("Updated User {}", i)),
+            )
+            .unwrap();
+        updated_data
+            .set("version", DefaultValueFactory::create_number(2.0).unwrap())
+            .unwrap();
+        updated_data
+            .set(
+                "last_modified",
+                Value::from_number(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as f64,
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
         let start = Instant::now();
-        let result = manager.update("update_users".to_string(), format!("user_{}", i), updated_data);
+        let result = manager.update(
+            "update_users".to_string(),
+            format!("user_{}", i),
+            updated_data,
+        );
         let duration = start.elapsed();
 
         assert!(result.is_ok());
@@ -500,7 +730,11 @@ fn test_performance_update_operations() {
     println!("  Min: {}μs", min_update_time);
     println!("  Max: {}μs", max_update_time);
 
-    assert!(avg_update_time < 5000, "Update too slow: {}μs > 5000μs", avg_update_time);
+    assert!(
+        avg_update_time < 5000,
+        "Update too slow: {}μs > 5000μs",
+        avg_update_time
+    );
 }
 
 #[test]
@@ -510,11 +744,22 @@ fn test_performance_delete_operations() {
     println!("=== PERFORMANCE TEST: Delete Operations ===");
 
     for i in 0..1000 {
-        let mut data = Value::new_object();
-        data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        data.set("name", Value::from_str(&format!("User {}", i))).unwrap();
+        let mut data = DefaultValueFactory::create_object();
+        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        data.set(
+            "name",
+            DefaultValueFactory::create_string(&format!("User {}", i)),
+        )
+        .unwrap();
 
-        manager.insert("delete_users".to_string(), Some(format!("user_{}", i)), data).unwrap();
+        manager
+            .insert(
+                "delete_users".to_string(),
+                Some(format!("user_{}", i)),
+                data,
+            )
+            .unwrap();
     }
 
     let mut delete_times = Vec::new();
@@ -540,7 +785,11 @@ fn test_performance_delete_operations() {
     let remaining_users = manager.get_all("delete_users".to_string()).unwrap();
     assert_eq!(remaining_users.len(), 0);
 
-    assert!(avg_delete_time < 5000, "Delete too slow: {}μs > 5000μs", avg_delete_time);
+    assert!(
+        avg_delete_time < 5000,
+        "Delete too slow: {}μs > 5000μs",
+        avg_delete_time
+    );
 }
 
 #[test]
@@ -554,10 +803,16 @@ fn test_performance_concurrent_model_access() {
 
     for model_name in &models {
         for i in 0..operations_per_model {
-            let mut data = Value::new_object();
-            data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-            data.set("model", Value::from_str(model_name)).unwrap();
-            data.set("data", Value::from_str(&format!("Data for {} item {}", model_name, i))).unwrap();
+            let mut data = DefaultValueFactory::create_object();
+            data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+                .unwrap();
+            data.set("model", DefaultValueFactory::create_string(model_name))
+                .unwrap();
+            data.set(
+                "data",
+                DefaultValueFactory::create_string(&format!("Data for {} item {}", model_name, i)),
+            )
+            .unwrap();
 
             manager.insert(model_name.to_string(), None, data).unwrap();
         }
@@ -587,7 +842,11 @@ fn test_performance_concurrent_model_access() {
         assert_eq!(records.len(), operations_per_model);
     }
 
-    assert!(ops_per_sec > 1000.0, "Concurrent access too slow: {:.0} ops/sec < 1000 ops/sec", ops_per_sec);
+    assert!(
+        ops_per_sec > 1000.0,
+        "Concurrent access too slow: {:.0} ops/sec < 1000 ops/sec",
+        ops_per_sec
+    );
 }
 
 #[test]
@@ -600,14 +859,28 @@ fn test_performance_large_record_operations() {
     let mut large_records = Vec::new();
 
     for i in 0..100 {
-        let mut data = Value::new_object();
-        data.set("id", Value::from_number(i as f64).unwrap()).unwrap();
-        data.set("large_field", Value::from_str(&large_text)).unwrap();
-        data.set("metadata", Value::from_str(&format!("Metadata for record {}", i))).unwrap();
+        let mut data = DefaultValueFactory::create_object();
+        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+        data.set(
+            "large_field",
+            DefaultValueFactory::create_string(&large_text),
+        )
+        .unwrap();
+        data.set(
+            "metadata",
+            DefaultValueFactory::create_string(&format!("Metadata for record {}", i)),
+        )
+        .unwrap();
 
-        let mut nested_data = Value::new_object();
+        let mut nested_data = DefaultValueFactory::create_object();
         for j in 0..50 {
-            nested_data.set(&format!("field_{}", j), Value::from_str(&format!("value_{}_{}", i, j))).unwrap();
+            nested_data
+                .set(
+                    &format!("field_{}", j),
+                    DefaultValueFactory::create_string(&format!("value_{}_{}", i, j)),
+                )
+                .unwrap();
         }
         data.set("nested", nested_data).unwrap();
 
@@ -616,7 +889,11 @@ fn test_performance_large_record_operations() {
 
     let start = Instant::now();
     for (i, record) in large_records.into_iter().enumerate() {
-        let result = manager.insert("large_records".to_string(), Some(format!("large_{}", i)), record);
+        let result = manager.insert(
+            "large_records".to_string(),
+            Some(format!("large_{}", i)),
+            record,
+        );
         assert!(result.is_ok());
     }
     let insert_duration = start.elapsed();
@@ -632,6 +909,12 @@ fn test_performance_large_record_operations() {
     println!("  Average retrieval time: {:?}", retrieval_duration / 100);
 
     assert_eq!(all_records.len(), 100);
-    assert!(insert_duration.as_millis() < 5000, "Large record insert too slow");
-    assert!(retrieval_duration.as_millis() < 1000, "Large record retrieval too slow");
+    assert!(
+        insert_duration.as_millis() < 5000,
+        "Large record insert too slow"
+    );
+    assert!(
+        retrieval_duration.as_millis() < 1000,
+        "Large record retrieval too slow"
+    );
 }

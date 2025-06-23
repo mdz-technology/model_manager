@@ -1,4 +1,4 @@
-use model_manager::{ModelManager, DynamicValue, ModelManagerFactory, DefaultModelManager, DefaultValue, DynamicValueFactory};
+use model_manager::{ModelManager, ModelManagerFactory, DefaultModelManager, DefaultValueFactory, ValueFactory, CoreValue};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Model Manager - Ejemplo Básico de Uso");
@@ -9,12 +9,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("=== EJEMPLO 1: OPERACIONES CRUD BÁSICAS ===");
 
-    let mut user = DefaultValue::create();
-    user.set("name", <DefaultValue as DynamicValueFactory>::Value::from_str("Ana García"))?;
-    user.set("email", <DefaultValue as DynamicValueFactory>::Value::from_str("ana@empresa.com"))?;
-    user.set("department", <DefaultValue as DynamicValueFactory>::Value::from_str("Ventas"))?;
-    user.set("active", <DefaultValue as DynamicValueFactory>::Value::from_bool(true))?;
-    user.set("age", <DefaultValue as DynamicValueFactory>::Value::from_number(28.0)?)?;
+    let mut user = DefaultValueFactory::create_object();
+    user.set("name", DefaultValueFactory::create_string("Ana García"))?;
+    user.set("email", DefaultValueFactory::create_string("ana@empresa.com"))?;
+    user.set("department", DefaultValueFactory::create_string("Ventas"))?;
+    user.set("active", DefaultValueFactory::create_bool(true))?;
+    user.set("age", DefaultValueFactory::create_number(28.0)?)?;
 
     println!("INPUT: {}", user.to_string());
 
@@ -33,12 +33,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("OUTPUT GET: {}", retrieved.to_string());
 
-    let mut updated_user = DefaultValue::create();
-    updated_user.set("name", <DefaultValue as DynamicValueFactory>::Value::from_str("Ana García Pérez"))?;
-    updated_user.set("email", <DefaultValue as DynamicValueFactory>::Value::from_str("ana.garcia@empresa.com"))?;
-    updated_user.set("department", <DefaultValue as DynamicValueFactory>::Value::from_str("Ingeniería"))?;
-    updated_user.set("active", <DefaultValue as DynamicValueFactory>::Value::from_bool(true))?;
-    updated_user.set("age", <DefaultValue as DynamicValueFactory>::Value::from_number(29.0)?)?;
+    let mut updated_user = DefaultValueFactory::create_object();
+    updated_user.set("name", DefaultValueFactory::create_string("Ana García Pérez"))?;
+    updated_user.set("email", DefaultValueFactory::create_string("ana.garcia@empresa.com"))?;
+    updated_user.set("department", DefaultValueFactory::create_string("Ingeniería"))?;
+    updated_user.set("active", DefaultValueFactory::create_bool(true))?;
+    updated_user.set("age", DefaultValueFactory::create_number(29.0)?)?;
 
     let updated = manager.update(
         "users".to_string(),
@@ -57,10 +57,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== EJEMPLO 2: MÚLTIPLES MODELOS ===");
 
     for i in 1..=3 {
-        let mut product = DefaultValue::create();
-        product.set("name", <DefaultValue as DynamicValueFactory>::Value::from_str(&format!("Producto {}", i)))?;
-        product.set("price", <DefaultValue as DynamicValueFactory>::Value::from_number(99.99 * i as f64)?)?;
-        product.set("stock", <DefaultValue as DynamicValueFactory>::Value::from_number(100.0 - i as f64 * 10.0)?)?;
+        let mut product = DefaultValueFactory::create_object();
+        product.set("name", DefaultValueFactory::create_string(&format!("Producto {}", i)))?;
+        product.set("price", DefaultValueFactory::create_number(99.99 * i as f64)?)?;
+        product.set("stock", DefaultValueFactory::create_number(100.0 - i as f64 * 10.0)?)?;
 
         let inserted_product = manager.insert(
             "products".to_string(),
@@ -80,14 +80,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n=== EJEMPLO 3: OPERACIONES EN DATOS ===");
 
-    let mut complex_data = DefaultValue::create();
-    complex_data.set("title", <DefaultValue as DynamicValueFactory>::Value::from_str("Datos Complejos"))?;
+    let mut complex_data = DefaultValueFactory::create_object();
+    complex_data.set("title", DefaultValueFactory::create_string("Datos Complejos"))?;
 
-    let mut items = <DefaultValue as DynamicValueFactory>::Value::new_array();
+    let mut items = DefaultValueFactory::create_array();
     for i in 1..=5 {
-        let mut item = <DefaultValue as DynamicValueFactory>::Value::new_object();
-        item.set("id", <DefaultValue as DynamicValueFactory>::Value::from_number(i as f64)?)?;
-        item.set("value", <DefaultValue as DynamicValueFactory>::Value::from_str(&format!("Item {}", i)))?;
+        let mut item = DefaultValueFactory::create_object();
+        item.set("id", DefaultValueFactory::create_number(i as f64)?)?;
+        item.set("value", DefaultValueFactory::create_string(&format!("Item {}", i)))?;
         items.push(item)?;
     }
 

@@ -1,6 +1,3 @@
-use std::future::Future;
-use std::pin::Pin;
-
 pub trait ObjectIterator: Send {
     type Item: Clone + Send + Sync + 'static;
     fn next(&mut self) -> Option<(String, Self::Item)>;
