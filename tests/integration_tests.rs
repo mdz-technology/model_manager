@@ -5,7 +5,7 @@ use model_manager::{
 
 #[test]
 fn test_basic_crud_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     // Create data
     let mut user_data = DefaultValueFactory::create_object();
@@ -18,7 +18,7 @@ fn test_basic_crud_operations() {
 
     // Insert
     let inserted = manager
-        .insert("users".to_string(), Some("user_1".to_string()), user_data)
+        .insert("users", Some("user_1"), user_data)
         .unwrap();
 
     assert_eq!(
@@ -28,7 +28,7 @@ fn test_basic_crud_operations() {
 
     // Get
     let retrieved = manager
-        .get("users".to_string(), "user_1".to_string())
+        .get("users", "user_1")
         .unwrap();
 
     assert_eq!(
@@ -46,7 +46,7 @@ fn test_basic_crud_operations() {
         .unwrap();
 
     let updated = manager
-        .update("users".to_string(), "user_1".to_string(), updated_data)
+        .update("users", "user_1", updated_data)
         .unwrap();
 
     assert_eq!(
@@ -55,13 +55,13 @@ fn test_basic_crud_operations() {
     );
 
     // Get all
-    let all_users = manager.get_all("users".to_string()).unwrap();
+    let all_users = manager.get_all("users").unwrap();
 
     assert_eq!(all_users.len(), 1);
 
     // Remove
     let removed = manager
-        .remove("users".to_string(), "user_1".to_string())
+        .remove("users", "user_1")
         .unwrap();
 
     assert_eq!(
@@ -70,14 +70,14 @@ fn test_basic_crud_operations() {
     );
 
     // Verify removal
-    let empty_list = manager.get_all("users".to_string()).unwrap();
+    let empty_list = manager.get_all("users").unwrap();
 
     assert_eq!(empty_list.len(), 0);
 }
 
 #[test]
 fn test_multiple_models() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     // Insert
     let mut user = DefaultValueFactory::create_object();
@@ -93,14 +93,14 @@ fn test_multiple_models() {
         .unwrap();
 
     // Insert
-    manager.insert("users".to_string(), None, user).unwrap();
+    manager.insert("users", None, user).unwrap();
     manager
-        .insert("products".to_string(), None, product)
+        .insert("products", None, product)
         .unwrap();
 
     // Verify
-    let users = manager.get_all("users".to_string()).unwrap();
-    let products = manager.get_all("products".to_string()).unwrap();
+    let users = manager.get_all("users").unwrap();
+    let products = manager.get_all("products").unwrap();
 
     assert_eq!(users.len(), 1);
     assert_eq!(products.len(), 1);
@@ -108,7 +108,7 @@ fn test_multiple_models() {
 
 #[test]
 fn test_sequential_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     // Create and insert 10 items sequential (la concurrencia ocurre dentro del actor system)
     for i in 0..10 {
@@ -122,18 +122,18 @@ fn test_sequential_operations() {
         .unwrap();
 
         // Insert
-        let result = manager.insert("sequential_users".to_string(), None, data);
+        let result = manager.insert("sequential_users", None, data);
         assert!(result.is_ok());
     }
 
     // Verify
-    let all_users = manager.get_all("sequential_users".to_string()).unwrap();
+    let all_users = manager.get_all("sequential_users").unwrap();
     assert_eq!(all_users.len(), 10);
 }
 
 #[test]
 fn test_actor_system_stress() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     // Test: El actor system maneja múltiples operaciones rápidas
 
@@ -150,12 +150,12 @@ fn test_actor_system_stress() {
         data.set("batch", DefaultValueFactory::create_string("stress_test"))
             .unwrap();
 
-        let result = manager.insert("stress_users".to_string(), None, data);
+        let result = manager.insert("stress_users", None, data);
         assert!(result.is_ok(), "Failed to insert user {}", i);
     }
 
     // Fase 2: Verificación de consistencia
-    let all_users = manager.get_all("stress_users".to_string()).unwrap();
+    let all_users = manager.get_all("stress_users").unwrap();
     assert_eq!(
         all_users.len(),
         50,
@@ -180,13 +180,13 @@ fn test_actor_system_stress() {
             )
             .unwrap();
 
-        let result = manager.insert("stress_products".to_string(), None, product);
+        let result = manager.insert("stress_products", None, product);
         assert!(result.is_ok());
     }
 
     // Verificación final - múltiples modelos
-    let final_users = manager.get_all("stress_users".to_string()).unwrap();
-    let final_products = manager.get_all("stress_products".to_string()).unwrap();
+    let final_users = manager.get_all("stress_users").unwrap();
+    let final_products = manager.get_all("stress_products").unwrap();
 
     assert_eq!(final_users.len(), 50);
     assert_eq!(final_products.len(), 10);

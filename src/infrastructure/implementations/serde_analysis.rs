@@ -14,7 +14,9 @@ impl ValueAnalysis for SerdeCoreValue {
     }
 
     fn calculate_hash(&self) -> ModelResult<u64> {
-        calculate_hash_internal(self)
+        let mut hasher = DefaultHasher::new();
+        self.inner.to_string().hash(&mut hasher);
+        Ok(hasher.finish())
     }
 
     fn equals(&self, other: &Self) -> ModelResult<bool> {
@@ -58,53 +60,6 @@ fn merge_internal(this: &mut SerdeCoreValue, other: &SerdeCoreValue) -> ModelRes
             Ok(())
         }
     }
-}
-
-fn calculate_hash_internal(value: &SerdeCoreValue) -> ModelResult<u64> {
-    let mut hasher = DefaultHasher::new();
-
-    match &value.inner {
-        Value::Null => "null".hash(&mut hasher),
-        Value::Bool(b) => {
-            "bool".hash(&mut hasher);
-            b.hash(&mut hasher);
-        }
-        Value::Number(n) => {
-            "number".hash(&mut hasher);
-            n.to_string().hash(&mut hasher);
-        }
-        Value::String(s) => {
-            "string".hash(&mut hasher);
-            s.hash(&mut hasher);
-        }
-        Value::Array(arr) => {
-            "array".hash(&mut hasher);
-            arr.len().hash(&mut hasher);
-            for item in arr {
-                let item_value = SerdeCoreValue::from_serde_value(item.clone());
-                let item_hash = calculate_hash_internal(&item_value)?;
-                item_hash.hash(&mut hasher);
-            }
-        }
-        Value::Object(obj) => {
-            "object".hash(&mut hasher);
-            obj.len().hash(&mut hasher);
-
-            let mut sorted_keys: Vec<_> = obj.keys().collect();
-            sorted_keys.sort();
-
-            for key in sorted_keys {
-                key.hash(&mut hasher);
-                if let Some(inner_value) = obj.get(key) {
-                    let value_dynamic = SerdeCoreValue::from_serde_value(inner_value.clone());
-                    let value_hash = calculate_hash_internal(&value_dynamic)?;
-                    value_hash.hash(&mut hasher);
-                }
-            }
-        }
-    }
-
-    Ok(hasher.finish())
 }
 
 fn equals_internal(this: &SerdeCoreValue, other: &SerdeCoreValue) -> ModelResult<bool> {

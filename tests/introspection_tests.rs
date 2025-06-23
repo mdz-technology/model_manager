@@ -3,8 +3,6 @@ use model_manager::{
     ValueFactory, ValueIntrospection,
 };
 
-type Value = <DefaultValueFactory as ValueFactory>::Value;
-
 #[test]
 fn test_has_property_basic() {
     // Given: Objeto con propiedades conocidas
@@ -369,7 +367,7 @@ fn test_introspection_performance() {
 #[test]
 fn test_introspection_with_model_manager() {
     // Given: Model manager con datos empresariales
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut company = DefaultValueFactory::create_object();
     company
@@ -402,15 +400,15 @@ fn test_introspection_with_model_manager() {
 
     manager
         .insert(
-            "companies".to_string(),
-            Some("company_001".to_string()),
+            "companies",
+            Some("company_001"),
             company,
         )
         .unwrap();
 
     // When: Usar introspección a través del model manager
     let retrieved = manager
-        .get("companies".to_string(), "company_001".to_string())
+        .get("companies", "company_001")
         .unwrap();
 
     let property_names = retrieved.get_property_names().unwrap();

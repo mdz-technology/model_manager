@@ -98,7 +98,7 @@ fn test_optimized_deep_path_setting() {
 
 #[test]
 fn test_model_manager_batch_path_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut company_config = DefaultValueFactory::create_object();
     company_config
@@ -131,8 +131,8 @@ fn test_model_manager_batch_path_operations() {
 
     manager
         .insert(
-            "company_config".to_string(),
-            Some("main_config".to_string()),
+            "company_config",
+            Some("main_config"),
             company_config,
         )
         .unwrap();
@@ -141,27 +141,27 @@ fn test_model_manager_batch_path_operations() {
 
     let company_name = manager
         .get_by_path(
-            "company_config".to_string(),
-            "main_config".to_string(),
-            "general.name".to_string(),
+            "company_config",
+            "main_config",
+            "general.name",
         )
         .unwrap()
         .unwrap();
 
     let db_port = manager
         .get_by_path(
-            "company_config".to_string(),
-            "main_config".to_string(),
-            "database.port".to_string(),
+            "company_config",
+            "main_config",
+            "database.port",
         )
         .unwrap()
         .unwrap();
 
     let analytics_enabled = manager
         .get_by_path(
-            "company_config".to_string(),
-            "main_config".to_string(),
-            "features.analytics".to_string(),
+            "company_config",
+            "main_config",
+            "features.analytics",
         )
         .unwrap()
         .unwrap();

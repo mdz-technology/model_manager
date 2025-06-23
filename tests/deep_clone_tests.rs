@@ -526,7 +526,7 @@ fn test_deep_clone_performance_threshold() {
 
 #[test]
 fn test_deep_clone_with_model_manager() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let unique_id = format!(
         "tech_corp_{}",
@@ -584,13 +584,13 @@ fn test_deep_clone_with_model_manager() {
     company.set("employees", employees).unwrap();
 
     let _inserted = manager
-        .insert("companies".to_string(), Some(unique_id.clone()), company)
+        .insert("companies", Some(unique_id.clone().as_str()), company)
         .unwrap();
 
     println!("Inserted company with ID: {}", unique_id);
 
     let retrieved = manager
-        .get("companies".to_string(), unique_id.clone())
+        .get("companies", unique_id.clone().as_str())
         .unwrap();
 
     let start = Instant::now();

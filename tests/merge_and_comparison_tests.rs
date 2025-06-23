@@ -651,7 +651,7 @@ fn test_context_merge_scenario() {
 #[test]
 fn test_model_manager_with_merge_and_comparison() {
     // Given: Model manager con datos para merge y comparación
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     // Template base
     let mut base_template = DefaultValueFactory::create_object();
@@ -676,8 +676,8 @@ fn test_model_manager_with_merge_and_comparison() {
 
     manager
         .insert(
-            "templates".to_string(),
-            Some("base_template".to_string()),
+            "templates",
+            Some("base_template"),
             base_template,
         )
         .unwrap();
@@ -699,18 +699,18 @@ fn test_model_manager_with_merge_and_comparison() {
 
     manager
         .insert(
-            "templates".to_string(),
-            Some("override_template".to_string()),
+            "templates",
+            Some("override_template"),
             override_template,
         )
         .unwrap();
 
     // When: Recuperar y hacer merge
     let mut base = manager
-        .get("templates".to_string(), "base_template".to_string())
+        .get("templates", "base_template")
         .unwrap();
     let override_data = manager
-        .get("templates".to_string(), "override_template".to_string())
+        .get("templates", "override_template")
         .unwrap();
 
     println!("Base before merge: {}", base.to_string());
@@ -759,18 +759,18 @@ fn test_model_manager_with_merge_and_comparison() {
     // When: Guardar template merged
     manager
         .update(
-            "templates".to_string(),
-            "base_template".to_string(),
+            "templates",
+            "base_template",
             base.clone(),
         )
         .unwrap();
 
     // When: Comparar con original
     let original = manager
-        .get("templates".to_string(), "override_template".to_string())
+        .get("templates", "override_template")
         .unwrap();
     let merged = manager
-        .get("templates".to_string(), "base_template".to_string())
+        .get("templates", "base_template")
         .unwrap();
 
     let are_equal = merged.equals(&original).unwrap();

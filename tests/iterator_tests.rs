@@ -1000,7 +1000,7 @@ fn test_iterator_error_resilience() {
 
 #[test]
 fn test_iterators_with_model_manager_integration() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     for i in 1..=5 {
         let mut user = DefaultValueFactory::create_object();
@@ -1021,10 +1021,10 @@ fn test_iterators_with_model_manager_integration() {
             .unwrap();
         user.set("tags", tags).unwrap();
 
-        manager.insert("users".to_string(), None, user).unwrap();
+        manager.insert("users", None, user).unwrap();
     }
 
-    let users = manager.get_all("users".to_string()).unwrap();
+    let users = manager.get_all("users").unwrap();
 
     let mut users_array = DefaultValueFactory::create_array();
     for user in users {

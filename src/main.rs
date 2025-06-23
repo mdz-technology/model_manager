@@ -4,7 +4,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Model Manager - Ejemplo Básico de Uso");
     println!("=========================================\n");
 
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
     println!("✅ Manager creado exitosamente\n");
 
     println!("=== EJEMPLO 1: OPERACIONES CRUD BÁSICAS ===");
@@ -19,16 +19,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("INPUT: {}", user.to_string());
 
     let inserted = manager.insert(
-        "users".to_string(),
-        Some("usr_001".to_string()),
+        "users",
+        Some("usr_001"),
         user
     )?;
 
     println!("OUTPUT INSERT: {}", inserted.to_string());
 
     let retrieved = manager.get(
-        "users".to_string(),
-        "usr_001".to_string()
+        "users",
+        "usr_001"
     )?;
 
     println!("OUTPUT GET: {}", retrieved.to_string());
@@ -41,14 +41,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     updated_user.set("age", DefaultValueFactory::create_number(29.0)?)?;
 
     let updated = manager.update(
-        "users".to_string(),
-        "usr_001".to_string(),
+        "users",
+        "usr_001",
         updated_user
     )?;
 
     println!("OUTPUT UPDATE: {}", updated.to_string());
 
-    let all_users = manager.get_all("users".to_string())?;
+    let all_users = manager.get_all("users")?;
     println!("OUTPUT GET_ALL: {} usuarios encontrados", all_users.len());
     for (i, user) in all_users.iter().enumerate() {
         println!("  Usuario {}: {}", i + 1, user.to_string());
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         product.set("stock", DefaultValueFactory::create_number(100.0 - i as f64 * 10.0)?)?;
 
         let inserted_product = manager.insert(
-            "products".to_string(),
+            "products",
             None,
             product
         )?;
@@ -71,8 +71,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Producto {} creado: {}", i, inserted_product.to_string());
     }
 
-    let users = manager.get_all("users".to_string())?;
-    let products = manager.get_all("products".to_string())?;
+    let users = manager.get_all("users")?;
+    let products = manager.get_all("products")?;
 
     println!("OUTPUT MÚLTIPLES MODELOS:");
     println!("  Usuarios: {}", users.len());
@@ -94,8 +94,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     complex_data.set("items", items)?;
 
     let complex_inserted = manager.insert(
-        "complex".to_string(),
-        Some("complex_001".to_string()),
+        "complex",
+        Some("complex_001"),
         complex_data
     )?;
 
@@ -117,13 +117,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== EJEMPLO 4: REMOVE ===");
 
     let removed_user = manager.remove(
-        "users".to_string(),
-        "usr_001".to_string()
+        "users",
+        "usr_001"
     )?;
 
     println!("OUTPUT REMOVE: {}", removed_user.to_string());
 
-    let users_after_remove = manager.get_all("users".to_string())?;
+    let users_after_remove = manager.get_all("users")?;
     println!("Usuarios restantes: {}", users_after_remove.len());
 
     println!("\n🎉 Todos los ejemplos completados exitosamente!");

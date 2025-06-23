@@ -8,7 +8,7 @@ type Value = <DefaultValueFactory as ValueFactory>::Value;
 
 #[test]
 fn test_performance_single_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Single Operations ===");
 
@@ -29,7 +29,7 @@ fn test_performance_single_operations() {
         .unwrap();
 
         let start = Instant::now();
-        let result = manager.insert("perf_users".to_string(), None, data);
+        let result = manager.insert("perf_users", None, data);
         let duration = start.elapsed();
 
         assert!(result.is_ok());
@@ -46,11 +46,11 @@ fn test_performance_single_operations() {
     println!("  Max: {}μs", max_insert_time);
 
     let mut get_times = Vec::new();
-    let all_users = manager.get_all("perf_users".to_string()).unwrap();
+    let all_users = manager.get_all("perf_users").unwrap();
 
     for _ in 0..100 {
         let start = Instant::now();
-        let _users = manager.get_all("perf_users".to_string()).unwrap();
+        let _users = manager.get_all("perf_users").unwrap();
         let duration = start.elapsed();
         get_times.push(duration.as_micros());
     }
@@ -76,7 +76,7 @@ fn test_performance_single_operations() {
 
 #[test]
 fn test_performance_bulk_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Bulk Operations ===");
 
@@ -103,7 +103,7 @@ fn test_performance_bulk_operations() {
         )
         .unwrap();
 
-        let result = manager.insert("bulk_users".to_string(), None, data);
+        let result = manager.insert("bulk_users", None, data);
         assert!(result.is_ok());
 
         if i % 1000 == 0 && i > 0 {
@@ -120,7 +120,7 @@ fn test_performance_bulk_operations() {
     println!("  Total time: {:?}", total_duration);
     println!("  Throughput: {:.0} ops/sec", total_ops_per_sec);
 
-    let all_users = manager.get_all("bulk_users".to_string()).unwrap();
+    let all_users = manager.get_all("bulk_users").unwrap();
     assert_eq!(all_users.len(), 10000);
 
     assert!(
@@ -137,7 +137,7 @@ fn test_performance_bulk_operations() {
 
 #[test]
 fn test_performance_multiple_models() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Multiple Models ===");
 
@@ -176,7 +176,7 @@ fn test_performance_multiple_models() {
             )
             .unwrap();
 
-            let result = manager.insert(model_name.to_string(), None, data);
+            let result = manager.insert(model_name, None, data);
             assert!(result.is_ok());
         }
 
@@ -200,7 +200,7 @@ fn test_performance_multiple_models() {
     println!("  Overall throughput: {:.0} ops/sec", total_ops_per_sec);
 
     for model_name in &models {
-        let records = manager.get_all(model_name.to_string()).unwrap();
+        let records = manager.get_all(model_name).unwrap();
         assert_eq!(
             records.len(),
             operations_per_model,
@@ -220,7 +220,7 @@ fn test_performance_multiple_models() {
 
 #[test]
 fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::Error>> {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Complex Data Structures ===");
 
@@ -306,7 +306,7 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
         })?;
         complex_data.set("metadata", metadata)?;
 
-        let result = manager.insert("complex_records".to_string(), None, complex_data);
+        let result = manager.insert("complex_records", None, complex_data);
         assert!(result.is_ok());
 
         if i % 100 == 0 && i > 0 {
@@ -327,7 +327,7 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
     println!("  Throughput: {:.0} ops/sec", ops_per_sec);
 
     let retrieval_start = Instant::now();
-    let all_complex = manager.get_all("complex_records".to_string()).unwrap();
+    let all_complex = manager.get_all("complex_records").unwrap();
     let retrieval_duration = retrieval_start.elapsed();
 
     println!(
@@ -376,7 +376,7 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
 
 #[test]
 fn test_performance_memory_usage() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Memory Usage ===");
 
@@ -404,14 +404,14 @@ fn test_performance_memory_usage() {
             )
             .unwrap();
 
-            let result = manager.insert(format!("memory_test_{}", size), None, data);
+            let result = manager.insert(format!("memory_test_{}", size).as_str(), None, data);
             assert!(result.is_ok());
         }
 
         let duration = start.elapsed();
         let ops_per_sec = (size as f64) / duration.as_secs_f64();
 
-        let records = manager.get_all(format!("memory_test_{}", size)).unwrap();
+        let records = manager.get_all(format!("memory_test_{}", size).as_str()).unwrap();
         assert_eq!(records.len(), size);
 
         println!(
@@ -424,7 +424,7 @@ fn test_performance_memory_usage() {
 
     for &size in &record_sizes {
         let start = Instant::now();
-        let records = manager.get_all(format!("memory_test_{}", size)).unwrap();
+        let records = manager.get_all(format!("memory_test_{}", size).as_str()).unwrap();
         let duration = start.elapsed();
 
         assert_eq!(records.len(), size);
@@ -439,7 +439,7 @@ fn test_performance_memory_usage() {
 }
 #[test]
 fn test_performance_mixed_workload() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Mixed Workload ===");
 
@@ -454,7 +454,7 @@ fn test_performance_mixed_workload() {
         .unwrap();
 
         manager
-            .insert("mixed_users".to_string(), Some(format!("user_{}", i)), data)
+            .insert("mixed_users", Some(format!("user_{}", i).as_str()), data)
             .unwrap();
     }
 
@@ -472,7 +472,7 @@ fn test_performance_mixed_workload() {
 
         match operation_type {
             0..=5 => {
-                let _all_users = manager.get_all("mixed_users".to_string()).unwrap();
+                let _all_users = manager.get_all("mixed_users").unwrap();
                 read_count += 1;
             }
             6..=8 => {
@@ -493,7 +493,7 @@ fn test_performance_mixed_workload() {
                     .set("created_in_mixed", DefaultValueFactory::create_bool(true))
                     .unwrap();
 
-                let result = manager.insert("mixed_users".to_string(), None, new_data);
+                let result = manager.insert("mixed_users", None, new_data);
                 assert!(result.is_ok());
                 insert_count += 1;
             }
@@ -519,7 +519,7 @@ fn test_performance_mixed_workload() {
                     )
                     .unwrap();
 
-                let _result = manager.update("mixed_users".to_string(), user_id, update_data);
+                let _result = manager.update("mixed_users", user_id.as_str(), update_data);
                 update_count += 1;
             }
             _ => unreachable!(),
@@ -555,7 +555,7 @@ fn test_performance_mixed_workload() {
     println!("  Total time: {:?}", total_duration);
     println!("  Overall throughput: {:.0} ops/sec", total_ops_per_sec);
 
-    let final_users = manager.get_all("mixed_users".to_string()).unwrap();
+    let final_users = manager.get_all("mixed_users").unwrap();
     let expected_final_count = 1000 + insert_count;
     assert_eq!(final_users.len(), expected_final_count);
 
@@ -574,7 +574,7 @@ fn test_performance_mixed_workload() {
 
 #[test]
 fn test_performance_detailed_benchmarks() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== DETAILED PERFORMANCE BENCHMARKS ===");
 
@@ -598,7 +598,7 @@ fn test_performance_detailed_benchmarks() {
     for _ in 0..100 {
         let operation_start = Instant::now();
         let data = test_data.clone();
-        let result = manager.insert("benchmark_users".to_string(), None, data);
+        let result = manager.insert("benchmark_users", None, data);
         let operation_duration = operation_start.elapsed();
 
         assert!(result.is_ok());
@@ -614,7 +614,7 @@ fn test_performance_detailed_benchmarks() {
     println!("  Min: {}μs", insert_times.iter().min().unwrap());
     println!("  Max: {}μs", insert_times.iter().max().unwrap());
 
-    let users = manager.get_all("benchmark_users".to_string()).unwrap();
+    let users = manager.get_all("benchmark_users").unwrap();
     let record_count = users.len();
 
     let mut get_times = Vec::new();
@@ -622,7 +622,7 @@ fn test_performance_detailed_benchmarks() {
 
     for _ in 0..50 {
         let operation_start = Instant::now();
-        let _result = manager.get_all("benchmark_users".to_string()).unwrap();
+        let _result = manager.get_all("benchmark_users").unwrap();
         let operation_duration = operation_start.elapsed();
         get_times.push(operation_duration.as_micros());
     }
@@ -655,7 +655,7 @@ fn test_performance_detailed_benchmarks() {
 
 #[test]
 fn test_performance_update_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Update Operations ===");
 
@@ -673,8 +673,8 @@ fn test_performance_update_operations() {
 
         manager
             .insert(
-                "update_users".to_string(),
-                Some(format!("user_{}", i)),
+                "update_users",
+                Some(format!("user_{}", i).as_str()),
                 data,
             )
             .unwrap();
@@ -690,7 +690,7 @@ fn test_performance_update_operations() {
         updated_data
             .set(
                 "name",
-                DefaultValueFactory::create_string(&format!("Updated User {}", i)),
+                DefaultValueFactory::create_string(format!("Updated User {}", i).as_str()),
             )
             .unwrap();
         updated_data
@@ -711,8 +711,8 @@ fn test_performance_update_operations() {
 
         let start = Instant::now();
         let result = manager.update(
-            "update_users".to_string(),
-            format!("user_{}", i),
+            "update_users",
+            format!("user_{}", i).as_str(),
             updated_data,
         );
         let duration = start.elapsed();
@@ -739,7 +739,7 @@ fn test_performance_update_operations() {
 
 #[test]
 fn test_performance_delete_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Delete Operations ===");
 
@@ -755,8 +755,8 @@ fn test_performance_delete_operations() {
 
         manager
             .insert(
-                "delete_users".to_string(),
-                Some(format!("user_{}", i)),
+                "delete_users",
+                Some(format!("user_{}", i).as_str()),
                 data,
             )
             .unwrap();
@@ -766,7 +766,7 @@ fn test_performance_delete_operations() {
 
     for i in 0..1000 {
         let start = Instant::now();
-        let result = manager.remove("delete_users".to_string(), format!("user_{}", i));
+        let result = manager.remove("delete_users", format!("user_{}", i).as_str());
         let duration = start.elapsed();
 
         assert!(result.is_ok());
@@ -782,7 +782,7 @@ fn test_performance_delete_operations() {
     println!("  Min: {}μs", min_delete_time);
     println!("  Max: {}μs", max_delete_time);
 
-    let remaining_users = manager.get_all("delete_users".to_string()).unwrap();
+    let remaining_users = manager.get_all("delete_users").unwrap();
     assert_eq!(remaining_users.len(), 0);
 
     assert!(
@@ -794,7 +794,7 @@ fn test_performance_delete_operations() {
 
 #[test]
 fn test_performance_concurrent_model_access() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Concurrent Model Access ===");
 
@@ -814,7 +814,7 @@ fn test_performance_concurrent_model_access() {
             )
             .unwrap();
 
-            manager.insert(model_name.to_string(), None, data).unwrap();
+            manager.insert(model_name, None, data).unwrap();
         }
     }
 
@@ -823,7 +823,7 @@ fn test_performance_concurrent_model_access() {
 
     for _ in 0..1000 {
         for model_name in &models {
-            let _records = manager.get_all(model_name.to_string()).unwrap();
+            let _records = manager.get_all(model_name).unwrap();
             operation_count += 1;
         }
     }
@@ -838,7 +838,7 @@ fn test_performance_concurrent_model_access() {
     println!("  Throughput: {:.0} ops/sec", ops_per_sec);
 
     for model_name in &models {
-        let records = manager.get_all(model_name.to_string()).unwrap();
+        let records = manager.get_all(model_name).unwrap();
         assert_eq!(records.len(), operations_per_model);
     }
 
@@ -851,7 +851,7 @@ fn test_performance_concurrent_model_access() {
 
 #[test]
 fn test_performance_large_record_operations() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     println!("=== PERFORMANCE TEST: Large Record Operations ===");
 
@@ -890,8 +890,8 @@ fn test_performance_large_record_operations() {
     let start = Instant::now();
     for (i, record) in large_records.into_iter().enumerate() {
         let result = manager.insert(
-            "large_records".to_string(),
-            Some(format!("large_{}", i)),
+            "large_records",
+            Some(format!("large_{}", i).as_str()),
             record,
         );
         assert!(result.is_ok());
@@ -899,7 +899,7 @@ fn test_performance_large_record_operations() {
     let insert_duration = start.elapsed();
 
     let start = Instant::now();
-    let all_records = manager.get_all("large_records".to_string()).unwrap();
+    let all_records = manager.get_all("large_records").unwrap();
     let retrieval_duration = start.elapsed();
 
     println!("LARGE RECORD Performance:");

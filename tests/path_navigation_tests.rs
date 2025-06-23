@@ -4,7 +4,6 @@ use model_manager::{
 };
 
 type Value = <DefaultValueFactory as ValueFactory>::Value;
-type Manager = <DefaultModelManager as ModelManagerFactory<Value>>::Manager;
 
 #[test]
 fn test_get_by_path_single_level() {
@@ -817,7 +816,7 @@ fn test_set_by_path_performance() {
 
 #[test]
 fn test_model_manager_get_by_path_simple() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user = DefaultValueFactory::create_object();
     user.set("name", DefaultValueFactory::create_string("Ana García"))
@@ -846,30 +845,30 @@ fn test_model_manager_get_by_path_simple() {
     user.set("profile", profile).unwrap();
 
     manager
-        .insert("users".to_string(), Some("user_001".to_string()), user)
+        .insert("users", Some("user_001"), user)
         .unwrap();
 
     let name_result = manager
         .get_by_path(
-            "users".to_string(),
-            "user_001".to_string(),
-            "name".to_string(),
+            "users",
+            "user_001",
+            "name",
         )
         .unwrap();
 
     let department_result = manager
         .get_by_path(
-            "users".to_string(),
-            "user_001".to_string(),
-            "profile.department".to_string(),
+            "users",
+            "user_001",
+            "profile.department",
         )
         .unwrap();
 
     let level_result = manager
         .get_by_path(
-            "users".to_string(),
-            "user_001".to_string(),
-            "profile.level".to_string(),
+            "users",
+            "user_001",
+            "profile.level",
         )
         .unwrap();
 
@@ -887,28 +886,28 @@ fn test_model_manager_get_by_path_simple() {
 
 #[test]
 fn test_model_manager_get_by_path_nonexistent_paths() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user = DefaultValueFactory::create_object();
     user.set("name", DefaultValueFactory::create_string("Test User"))
         .unwrap();
     manager
-        .insert("users".to_string(), Some("user_001".to_string()), user)
+        .insert("users", Some("user_001"), user)
         .unwrap();
 
     let nonexistent_field = manager
         .get_by_path(
-            "users".to_string(),
-            "user_001".to_string(),
-            "nonexistent".to_string(),
+            "users",
+            "user_001",
+            "nonexistent",
         )
         .unwrap();
 
     let nonexistent_nested = manager
         .get_by_path(
-            "users".to_string(),
-            "user_001".to_string(),
-            "name.invalid".to_string(),
+            "users",
+            "user_001",
+            "name.invalid",
         )
         .unwrap();
 
@@ -920,12 +919,12 @@ fn test_model_manager_get_by_path_nonexistent_paths() {
 
 #[test]
 fn test_model_manager_get_by_path_nonexistent_record() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let result = manager.get_by_path(
-        "users".to_string(),
-        "nonexistent_user".to_string(),
-        "name".to_string(),
+        "users",
+        "nonexistent_user",
+        "name",
     );
 
     assert!(result.is_err());
@@ -940,7 +939,7 @@ fn test_model_manager_get_by_path_nonexistent_record() {
 
 #[test]
 fn test_model_manager_find_by_path_exists_basic() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -955,7 +954,7 @@ fn test_model_manager_find_by_path_exists_basic() {
     user1
         .set("phone", DefaultValueFactory::create_string("123-456-7890"))
         .unwrap();
-    manager.insert("users".to_string(), None, user1).unwrap();
+    manager.insert("users", None, user1).unwrap();
 
     let mut user2 = DefaultValueFactory::create_object();
     user2
@@ -967,7 +966,7 @@ fn test_model_manager_find_by_path_exists_basic() {
             DefaultValueFactory::create_string("user2@test.com"),
         )
         .unwrap();
-    manager.insert("users".to_string(), None, user2).unwrap();
+    manager.insert("users", None, user2).unwrap();
 
     let mut user3 = DefaultValueFactory::create_object();
     user3
@@ -976,18 +975,18 @@ fn test_model_manager_find_by_path_exists_basic() {
     user3
         .set("phone", DefaultValueFactory::create_string("098-765-4321"))
         .unwrap();
-    manager.insert("users".to_string(), None, user3).unwrap();
+    manager.insert("users", None, user3).unwrap();
 
     let users_with_email = manager
-        .find_by_path_exists("users".to_string(), "email".to_string())
+        .find_by_path_exists("users", "email")
         .unwrap();
 
     let users_with_phone = manager
-        .find_by_path_exists("users".to_string(), "phone".to_string())
+        .find_by_path_exists("users", "phone")
         .unwrap();
 
     let users_with_name = manager
-        .find_by_path_exists("users".to_string(), "name".to_string())
+        .find_by_path_exists("users", "name")
         .unwrap();
 
     assert_eq!(users_with_email.len(), 2);
@@ -1007,7 +1006,7 @@ fn test_model_manager_find_by_path_exists_basic() {
 
 #[test]
 fn test_model_manager_find_by_path_exists_nested() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1026,7 +1025,7 @@ fn test_model_manager_find_by_path_exists_nested() {
         .unwrap();
     user1.set("profile", profile1).unwrap();
 
-    manager.insert("users".to_string(), None, user1).unwrap();
+    manager.insert("users", None, user1).unwrap();
 
     let mut user2 = DefaultValueFactory::create_object();
     user2
@@ -1039,24 +1038,24 @@ fn test_model_manager_find_by_path_exists_nested() {
         .unwrap();
     user2.set("profile", profile2).unwrap();
 
-    manager.insert("users".to_string(), None, user2).unwrap();
+    manager.insert("users", None, user2).unwrap();
 
     let mut user3 = DefaultValueFactory::create_object();
     user3
         .set("name", DefaultValueFactory::create_string("User 3"))
         .unwrap();
-    manager.insert("users".to_string(), None, user3).unwrap();
+    manager.insert("users", None, user3).unwrap();
 
     let users_with_profile = manager
-        .find_by_path_exists("users".to_string(), "profile".to_string())
+        .find_by_path_exists("users", "profile")
         .unwrap();
 
     let users_with_department = manager
-        .find_by_path_exists("users".to_string(), "profile.department".to_string())
+        .find_by_path_exists("users", "profile.department")
         .unwrap();
 
     let users_with_level = manager
-        .find_by_path_exists("users".to_string(), "profile.level".to_string())
+        .find_by_path_exists("users", "profile.level")
         .unwrap();
 
     assert_eq!(users_with_profile.len(), 2);
@@ -1068,7 +1067,7 @@ fn test_model_manager_find_by_path_exists_nested() {
 
 #[test]
 fn test_model_manager_find_by_path_value_basic() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1083,7 +1082,7 @@ fn test_model_manager_find_by_path_value_basic() {
     user1
         .set("active", DefaultValueFactory::create_bool(true))
         .unwrap();
-    manager.insert("users".to_string(), None, user1).unwrap();
+    manager.insert("users", None, user1).unwrap();
 
     let mut user2 = DefaultValueFactory::create_object();
     user2
@@ -1095,7 +1094,7 @@ fn test_model_manager_find_by_path_value_basic() {
     user2
         .set("active", DefaultValueFactory::create_bool(true))
         .unwrap();
-    manager.insert("users".to_string(), None, user2).unwrap();
+    manager.insert("users", None, user2).unwrap();
 
     let mut user3 = DefaultValueFactory::create_object();
     user3
@@ -1110,36 +1109,36 @@ fn test_model_manager_find_by_path_value_basic() {
     user3
         .set("active", DefaultValueFactory::create_bool(false))
         .unwrap();
-    manager.insert("users".to_string(), None, user3).unwrap();
+    manager.insert("users", None, user3).unwrap();
 
     let engineering_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "department".to_string(),
+            "users",
+            "department",
             DefaultValueFactory::create_string("Engineering"),
         )
         .unwrap();
 
     let sales_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "department".to_string(),
+            "users",
+            "department",
             DefaultValueFactory::create_string("Sales"),
         )
         .unwrap();
 
     let active_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "active".to_string(),
+            "users",
+            "active",
             DefaultValueFactory::create_bool(true),
         )
         .unwrap();
 
     let inactive_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "active".to_string(),
+            "users",
+            "active",
             DefaultValueFactory::create_bool(false),
         )
         .unwrap();
@@ -1164,7 +1163,7 @@ fn test_model_manager_find_by_path_value_basic() {
 
 #[test]
 fn test_model_manager_find_by_path_value_nested() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1186,7 +1185,7 @@ fn test_model_manager_find_by_path_value_nested() {
         .unwrap();
     user1.set("profile", profile1).unwrap();
 
-    manager.insert("users".to_string(), None, user1).unwrap();
+    manager.insert("users", None, user1).unwrap();
 
     let mut user2 = DefaultValueFactory::create_object();
     user2
@@ -1208,7 +1207,7 @@ fn test_model_manager_find_by_path_value_nested() {
         .unwrap();
     user2.set("profile", profile2).unwrap();
 
-    manager.insert("users".to_string(), None, user2).unwrap();
+    manager.insert("users", None, user2).unwrap();
 
     let mut user3 = DefaultValueFactory::create_object();
     user3
@@ -1227,28 +1226,28 @@ fn test_model_manager_find_by_path_value_nested() {
         .unwrap();
     user3.set("profile", profile3).unwrap();
 
-    manager.insert("users".to_string(), None, user3).unwrap();
+    manager.insert("users", None, user3).unwrap();
 
     let engineering_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "profile.department".to_string(),
+            "users",
+            "profile.department",
             DefaultValueFactory::create_string("Engineering"),
         )
         .unwrap();
 
     let remote_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "profile.remote".to_string(),
+            "users",
+            "profile.remote",
             DefaultValueFactory::create_bool(true),
         )
         .unwrap();
 
     let senior_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "profile.level".to_string(),
+            "users",
+            "profile.level",
             DefaultValueFactory::create_number(8.0).unwrap(),
         )
         .unwrap();
@@ -1277,7 +1276,7 @@ fn test_model_manager_find_by_path_value_nested() {
 
 #[test]
 fn test_model_manager_find_by_path_value_no_matches() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1286,26 +1285,26 @@ fn test_model_manager_find_by_path_value_no_matches() {
             DefaultValueFactory::create_string("Engineering"),
         )
         .unwrap();
-    manager.insert("users".to_string(), None, user1).unwrap();
+    manager.insert("users", None, user1).unwrap();
 
     let mut user2 = DefaultValueFactory::create_object();
     user2
         .set("department", DefaultValueFactory::create_string("Sales"))
         .unwrap();
-    manager.insert("users".to_string(), None, user2).unwrap();
+    manager.insert("users", None, user2).unwrap();
 
     let marketing_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "department".to_string(),
+            "users",
+            "department",
             DefaultValueFactory::create_string("Marketing"),
         )
         .unwrap();
 
     let nonexistent_field = manager
         .find_by_path_value(
-            "users".to_string(),
-            "nonexistent_field".to_string(),
+            "users",
+            "nonexistent_field",
             DefaultValueFactory::create_string("any_value"),
         )
         .unwrap();
@@ -1318,7 +1317,7 @@ fn test_model_manager_find_by_path_value_no_matches() {
 
 #[test]
 fn test_model_manager_path_methods_with_different_data_types() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut record = DefaultValueFactory::create_object();
     record
@@ -1347,53 +1346,53 @@ fn test_model_manager_path_methods_with_different_data_types() {
     record.set("array_field", array_field).unwrap();
 
     manager
-        .insert("records".to_string(), Some("rec_001".to_string()), record)
+        .insert("records", Some("rec_001"), record)
         .unwrap();
 
     let string_result = manager
         .get_by_path(
-            "records".to_string(),
-            "rec_001".to_string(),
-            "string_field".to_string(),
+            "records",
+            "rec_001",
+            "string_field",
         )
         .unwrap();
 
     let number_result = manager
         .get_by_path(
-            "records".to_string(),
-            "rec_001".to_string(),
-            "number_field".to_string(),
+            "records",
+            "rec_001",
+            "number_field",
         )
         .unwrap();
 
     let bool_result = manager
         .get_by_path(
-            "records".to_string(),
-            "rec_001".to_string(),
-            "bool_field".to_string(),
+            "records",
+            "rec_001",
+            "bool_field",
         )
         .unwrap();
 
     let records_with_string = manager
         .find_by_path_value(
-            "records".to_string(),
-            "string_field".to_string(),
+            "records",
+            "string_field",
             DefaultValueFactory::create_string("test_string"),
         )
         .unwrap();
 
     let records_with_number = manager
         .find_by_path_value(
-            "records".to_string(),
-            "number_field".to_string(),
+            "records",
+            "number_field",
             DefaultValueFactory::create_number(42.5).unwrap(),
         )
         .unwrap();
 
     let records_with_bool = manager
         .find_by_path_value(
-            "records".to_string(),
-            "bool_field".to_string(),
+            "records",
+            "bool_field",
             DefaultValueFactory::create_bool(true),
         )
         .unwrap();
@@ -1416,7 +1415,7 @@ fn test_model_manager_path_methods_with_different_data_types() {
 
 #[test]
 fn test_model_manager_path_methods_performance() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     for i in 0..100 {
         let mut user = DefaultValueFactory::create_object();
@@ -1441,19 +1440,19 @@ fn test_model_manager_path_methods_performance() {
         )
         .unwrap();
 
-        manager.insert("users".to_string(), None, user).unwrap();
+        manager.insert("users", None, user).unwrap();
     }
 
     let start = std::time::Instant::now();
 
     let users_with_department = manager
-        .find_by_path_exists("users".to_string(), "department".to_string())
+        .find_by_path_exists("users", "department")
         .unwrap();
 
     let engineering_users = manager
         .find_by_path_value(
-            "users".to_string(),
-            "department".to_string(),
+            "users",
+            "department",
             DefaultValueFactory::create_string("Engineering"),
         )
         .unwrap();
@@ -1477,16 +1476,16 @@ fn test_model_manager_path_methods_performance() {
 
 #[test]
 fn test_model_manager_path_methods_empty_model() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let exists_results = manager
-        .find_by_path_exists("empty_model".to_string(), "any_field".to_string())
+        .find_by_path_exists("empty_model", "any_field")
         .unwrap();
 
     let value_results = manager
         .find_by_path_value(
-            "empty_model".to_string(),
-            "any_field".to_string(),
+            "empty_model",
+            "any_field",
             DefaultValueFactory::create_string("any_value"),
         )
         .unwrap();
@@ -1499,7 +1498,7 @@ fn test_model_manager_path_methods_empty_model() {
 
 #[test]
 fn test_model_manager_path_methods_complex_scenario() {
-    let mut manager = DefaultModelManager::create();
+    let manager = DefaultModelManager::create();
 
     let mut employee1 = DefaultValueFactory::create_object();
     employee1
@@ -1525,8 +1524,8 @@ fn test_model_manager_path_methods_complex_scenario() {
 
     manager
         .insert(
-            "employees".to_string(),
-            Some("emp_001".to_string()),
+            "employees",
+            Some("emp_001"),
             employee1,
         )
         .unwrap();
@@ -1540,8 +1539,8 @@ fn test_model_manager_path_methods_complex_scenario() {
         .unwrap();
     manager
         .insert(
-            "employees".to_string(),
-            Some("emp_002".to_string()),
+            "employees",
+            Some("emp_002"),
             employee2,
         )
         .unwrap();
@@ -1570,29 +1569,29 @@ fn test_model_manager_path_methods_complex_scenario() {
 
     manager
         .insert(
-            "employees".to_string(),
-            Some("emp_003".to_string()),
+            "employees",
+            Some("emp_003"),
             employee3,
         )
         .unwrap();
 
     let engineering_employees = manager
         .find_by_path_value(
-            "employees".to_string(),
-            "department".to_string(),
+            "employees",
+            "department",
             DefaultValueFactory::create_string("Engineering"),
         )
         .unwrap();
 
     let employees_with_projects = manager
-        .find_by_path_exists("employees".to_string(), "projects".to_string())
+        .find_by_path_exists("employees", "projects")
         .unwrap();
 
     let alice_department = manager
         .get_by_path(
-            "employees".to_string(),
-            "emp_001".to_string(),
-            "department".to_string(),
+            "employees",
+            "emp_001",
+            "department",
         )
         .unwrap();
 
