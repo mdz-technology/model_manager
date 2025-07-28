@@ -1,11 +1,11 @@
-use model_manager::{
-    ConverterConfig, ConverterFactory, CoreValue, DataConverter, DefaultConverter,
+use dynamic_value::{
+    ConverterConfig, ConverterFactory, CoreValue, DataConverter, DefaultConverterFactory,
     DefaultValueFactory, JsonConverter, JsonConverterConfig, ValueFactory,
 };
 
 #[test]
 fn test_json_converter_basic() {
-    let converter = DefaultConverter::create_json_converter();
+    let converter = DefaultConverterFactory::create_json_converter();
 
     // Test from JSON
     let json_input = r#"{"name":"Test User","age":30,"active":true}"#.to_string();
@@ -55,7 +55,7 @@ fn test_json_converter_basic() {
 
 #[test]
 fn test_json_converter_complex_data() {
-    let converter = DefaultConverter::create_json_converter();
+    let converter = DefaultConverterFactory::create_json_converter();
 
     // Test complex JSON structure
     let complex_json = r#"{
@@ -127,7 +127,7 @@ fn test_json_converter_complex_data() {
 
 #[test]
 fn test_json_converter_batch_operations() {
-    let converter = DefaultConverter::create_json_converter();
+    let converter = DefaultConverterFactory::create_json_converter();
 
     // Test batch conversion from JSON
     let json_inputs = vec![
@@ -167,7 +167,7 @@ fn test_json_converter_batch_operations() {
 
 #[test]
 fn test_json_converter_pretty_printing() {
-    let converter = DefaultConverter::create_json_converter();
+    let converter = DefaultConverterFactory::create_json_converter();
 
     // Create test data
     let mut data = DefaultValueFactory::create_object();
@@ -200,7 +200,7 @@ fn test_json_converter_pretty_printing() {
 
 #[test]
 fn test_json_converter_error_handling() {
-    let converter = DefaultConverter::create_json_converter();
+    let converter = DefaultConverterFactory::create_json_converter();
 
     // Test invalid JSON
     let invalid_json = r#"{"name": "Test", "age": }"#.to_string(); // Missing value
@@ -235,7 +235,7 @@ fn test_json_converter_with_custom_config() {
         ..Default::default()
     };
 
-    let converter = DefaultConverter::create_json_converter_with_config(custom_config);
+    let converter = DefaultConverterFactory::create_json_converter_with_config(custom_config);
 
     // Test pretty output by default
     let mut data = DefaultValueFactory::create_object();

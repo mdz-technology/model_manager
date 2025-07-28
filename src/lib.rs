@@ -1,4 +1,5 @@
 pub mod application;
+pub mod composition;
 mod infrastructure;
 
 pub use application::traits::{
@@ -11,23 +12,26 @@ pub use application::traits::{
     model_manager::ModelManager,
 };
 
-pub use application::models::converter_config::{ConverterConfig, JsonConverterConfig};
-pub use application::models::errors::{ModelError, ModelResult};
-
 pub use application::services::{
-    iterator_factory::{
-        ArrayIteratorFactory, IteratorFactory, ObjectIteratorFactory,
-    },
+    iterator_factory::IteratorFactory,
     converter_factory::ConverterFactory,
     value_factory::ValueFactory,
     model_manager_factory::ModelManagerFactory,
 };
 
-pub use application::iterators::{
-    array_iterator::ArrayIterator, object_iterator::ObjectIterator,
+pub use application::models::{
+    errors::{ModelError, ModelResult},
+    converter_config::{ConverterConfig, JsonConverterConfig},
 };
 
-pub type DefaultModelManager = infrastructure::factories::default_model_manager_factory::DefaultModelManagerFactory;
-pub type DefaultValueFactory = infrastructure::factories::default_value_factory::DefaultValueFactory;
-pub type DefaultConverter = infrastructure::factories::default_converter_factory::DefaultConverterFactory;
-pub type DefaultIteratorFactory = infrastructure::factories::default_iterator_factory::DefaultIteratorFactory;
+pub use application::iterators::{
+    array_iterator::ArrayIterator, 
+    object_iterator::ObjectIterator,
+};
+
+pub use composition::{
+    DefaultModelManagerFactory,
+    DefaultValueFactory,
+    DefaultConverterFactory,
+    DefaultIteratorFactory,
+};

@@ -1,5 +1,5 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
+use dynamic_value::{
+    CoreValue, DefaultModelManagerFactory, DefaultValueFactory, ModelManager, ModelManagerFactory,
     ValueFactory, ValueIntrospection,
 };
 
@@ -367,7 +367,7 @@ fn test_introspection_performance() {
 #[test]
 fn test_introspection_with_model_manager() {
     // Given: Model manager con datos empresariales
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut company = DefaultValueFactory::create_object();
     company

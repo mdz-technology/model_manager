@@ -1,5 +1,5 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
+use dynamic_value::{
+    CoreValue, DefaultModelManagerFactory, DefaultValueFactory, ModelManager, ModelManagerFactory,
     ValueFactory,
 };
 use std::time::Instant;
@@ -8,7 +8,7 @@ type Value = <DefaultValueFactory as ValueFactory>::Value;
 
 #[test]
 fn test_performance_single_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Single Operations ===");
 
@@ -76,7 +76,7 @@ fn test_performance_single_operations() {
 
 #[test]
 fn test_performance_bulk_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Bulk Operations ===");
 
@@ -137,7 +137,7 @@ fn test_performance_bulk_operations() {
 
 #[test]
 fn test_performance_multiple_models() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Multiple Models ===");
 
@@ -220,7 +220,7 @@ fn test_performance_multiple_models() {
 
 #[test]
 fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::Error>> {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Complex Data Structures ===");
 
@@ -376,7 +376,7 @@ fn test_performance_complex_data_structures() -> Result<(), Box<dyn std::error::
 
 #[test]
 fn test_performance_memory_usage() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Memory Usage ===");
 
@@ -439,7 +439,7 @@ fn test_performance_memory_usage() {
 }
 #[test]
 fn test_performance_mixed_workload() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Mixed Workload ===");
 
@@ -574,7 +574,7 @@ fn test_performance_mixed_workload() {
 
 #[test]
 fn test_performance_detailed_benchmarks() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== DETAILED PERFORMANCE BENCHMARKS ===");
 
@@ -655,7 +655,7 @@ fn test_performance_detailed_benchmarks() {
 
 #[test]
 fn test_performance_update_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Update Operations ===");
 
@@ -739,7 +739,7 @@ fn test_performance_update_operations() {
 
 #[test]
 fn test_performance_delete_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Delete Operations ===");
 
@@ -794,7 +794,7 @@ fn test_performance_delete_operations() {
 
 #[test]
 fn test_performance_concurrent_model_access() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Concurrent Model Access ===");
 
@@ -851,7 +851,7 @@ fn test_performance_concurrent_model_access() {
 
 #[test]
 fn test_performance_large_record_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     println!("=== PERFORMANCE TEST: Large Record Operations ===");
 

@@ -1,52 +1,36 @@
 use crate::application::traits::core_value::CoreValue;
-use crate::infrastructure::implementations::{array_iterator::SerdeArrayIterator, object_iterator::SerdeObjectIterator};
+use crate::infrastructure::implementations::{serde_array_iterator::SerdeArrayIterator, serde_object_iterator::SerdeObjectIterator};
 use crate::{ModelError, ModelResult};
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
 pub struct SerdeCoreValue {
-    pub(crate) inner: Value,
+    pub inner: Value,
 }
 
 impl SerdeCoreValue {
-    pub fn from_serde_value(value: Value) -> Self {
+    pub (crate) fn from_serde_value(value: Value) -> Self {
         Self { inner: value }
     }
 
-    pub fn into_serde_value(self) -> Value {
+    pub (crate) fn into_serde_value(self) -> Value {
         self.inner
     }
 
-    pub fn iter_object(&self) -> ModelResult<SerdeObjectIterator> {
+    pub (crate) fn iter_object(&self) -> ModelResult<SerdeObjectIterator> {
         match &self.inner {
             Value::Object(obj) => Ok(SerdeObjectIterator::new(obj.clone())),
             _ => Err(ModelError::InvalidData("Value is not an object".to_string())),
         }
     }
 
-    pub fn iter_array(&self) -> ModelResult<SerdeArrayIterator> {
+    pub (crate) fn iter_array(&self) -> ModelResult<SerdeArrayIterator> {
         match &self.inner {
             Value::Array(arr) => Ok(SerdeArrayIterator::new(arr.clone())),
             _ => Err(ModelError::InvalidData("Value is not an array".to_string())),
         }
     }
 
-    pub fn get_path_parts(path: &str) -> Vec<String> {
-        if path.is_empty() {
-            Vec::new()
-        } else {
-            path.split('.').map(|s| s.to_string()).collect()
-        }
-    }
-
-    pub fn is_valid_path(path: &str) -> bool {
-        if path.is_empty() {
-            return false;
-        }
-
-        let parts: Vec<&str> = path.split('.').collect();
-        !parts.iter().any(|part| part.is_empty())
-    }
 }
 
 impl CoreValue for SerdeCoreValue {
@@ -129,6 +113,16 @@ impl CoreValue for SerdeCoreValue {
         self.inner.as_bool()
     }
 
+    fn as_array(&self) -> ModelResult<Option<Vec<Self>>> {
+        match &self.inner {
+            Value::Array(arr) => {
+                let result = arr.iter().map(|v| Self::from_serde_value(v.clone())).collect();
+                Ok(Some(result))
+            }
+            _ => Ok(None),
+        }
+    }
+
     fn get(&self, key: &str) -> ModelResult<Option<Self>> {
         Ok(self.inner.get(key).map(|v| Self::from_serde_value(v.clone())))
     }
@@ -153,13 +147,25 @@ impl CoreValue for SerdeCoreValue {
         }
     }
 
-    fn as_array(&self) -> ModelResult<Option<Vec<Self>>> {
-        match &self.inner {
-            Value::Array(arr) => {
-                let result = arr.iter().map(|v| Self::from_serde_value(v.clone())).collect();
-                Ok(Some(result))
+    fn remove_key(&mut self, key: &str) -> ModelResult<Option<Self>> {
+        match &mut self.inner {
+            Value::Object(map) => {
+                Ok(map.remove(key).map(|v| Self::from_serde_value(v)))
             }
-            _ => Ok(None),
+            _ => Err(ModelError::InvalidData("Cannot remove key from non-object value".to_string())),
+        }
+    }
+
+    fn remove_at(&mut self, index: usize) -> ModelResult<Option<Self>> {
+        match &mut self.inner {
+            Value::Array(arr) => {
+                if index < arr.len() {
+                    Ok(Some(Self::from_serde_value(arr.remove(index))))
+                } else {
+                    Ok(None)
+                }
+            }
+            _ => Err(ModelError::InvalidData("Cannot remove index from non-array value".to_string())),
         }
     }
 

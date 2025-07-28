@@ -33,6 +33,23 @@ impl PathNavigation for SerdeCoreValue {
 
         set_by_path_internal(self, &parts, value)
     }
+
+    fn get_path_parts(path: &str) -> Vec<String> {
+        if path.is_empty() {
+            Vec::new()
+        } else {
+            path.split('.').map(|s| s.to_string()).collect()
+        }
+    }
+
+    fn is_valid_path(path: &str) -> bool {
+        if path.is_empty() {
+            return false;
+        }
+
+        let parts: Vec<&str> = path.split('.').collect();
+        !parts.iter().any(|part| part.is_empty())
+    }
 }
 
 fn parse_path(path: &str) -> Vec<&str> {

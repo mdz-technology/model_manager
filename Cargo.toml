@@ -1,12 +1,12 @@
 [package]
-name = "model_manager"
+name = "dynamic_value"
 version = "1.0.0"
 edition = "2021"
-repository = "https://github.com/mdz-technology/model_manager"
+repository = "https://github.com/mdz-technology/dynamic_value"
 license-file = "LICENSE"
 
 [lib]
-name = "model_manager"
+name = "dynamic_value"
 path = "src/lib.rs"
 # generate to library compatible with C
 crate-type = ["rlib", "cdylib"] # Configuración opcional para crear librerías compartidas

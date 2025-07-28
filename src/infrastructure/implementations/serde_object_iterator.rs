@@ -11,7 +11,7 @@ pub struct SerdeObjectIterator {
 }
 
 impl SerdeObjectIterator {
-    pub fn new(map: Map<String, Value>) -> Self {
+    pub (crate) fn new(map: Map<String, Value>) -> Self {
         let total_size = map.len();
         let btree_map: std::collections::BTreeMap<String, Value> = map.into_iter().collect();
 

@@ -1,7 +1,4 @@
-use model_manager::{
-    ArrayIterator, CoreValue, DefaultIteratorFactory, DefaultModelManager, DefaultValueFactory,
-    IteratorFactory, ModelManager, ModelManagerFactory, ObjectIterator, ValueFactory,
-};
+use dynamic_value::{ArrayIterator, CoreValue, DefaultIteratorFactory, DefaultModelManagerFactory, DefaultValueFactory, IteratorFactory, ModelManager, ModelManagerFactory, ObjectIterator, ValueFactory};
 
 #[test]
 fn test_debug_simple_array_creation() {
@@ -1000,7 +997,7 @@ fn test_iterator_error_resilience() {
 
 #[test]
 fn test_iterators_with_model_manager_integration() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     for i in 1..=5 {
         let mut user = DefaultValueFactory::create_object();

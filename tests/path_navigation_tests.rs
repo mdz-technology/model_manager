@@ -1,5 +1,5 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, DynamicValue, ModelError, ModelManager,
+use dynamic_value::{
+    CoreValue, DefaultModelManagerFactory, DefaultValueFactory, DynamicValue, ModelError, ModelManager,
     ModelManagerFactory, ModelResult, PathNavigation, ValueAnalysis, ValueFactory,
 };
 
@@ -816,7 +816,7 @@ fn test_set_by_path_performance() {
 
 #[test]
 fn test_model_manager_get_by_path_simple() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user = DefaultValueFactory::create_object();
     user.set("name", DefaultValueFactory::create_string("Ana García"))
@@ -886,7 +886,7 @@ fn test_model_manager_get_by_path_simple() {
 
 #[test]
 fn test_model_manager_get_by_path_nonexistent_paths() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user = DefaultValueFactory::create_object();
     user.set("name", DefaultValueFactory::create_string("Test User"))
@@ -919,7 +919,7 @@ fn test_model_manager_get_by_path_nonexistent_paths() {
 
 #[test]
 fn test_model_manager_get_by_path_nonexistent_record() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let result = manager.get_by_path(
         "users",
@@ -939,7 +939,7 @@ fn test_model_manager_get_by_path_nonexistent_record() {
 
 #[test]
 fn test_model_manager_find_by_path_exists_basic() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1006,7 +1006,7 @@ fn test_model_manager_find_by_path_exists_basic() {
 
 #[test]
 fn test_model_manager_find_by_path_exists_nested() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1067,7 +1067,7 @@ fn test_model_manager_find_by_path_exists_nested() {
 
 #[test]
 fn test_model_manager_find_by_path_value_basic() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1163,7 +1163,7 @@ fn test_model_manager_find_by_path_value_basic() {
 
 #[test]
 fn test_model_manager_find_by_path_value_nested() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1276,7 +1276,7 @@ fn test_model_manager_find_by_path_value_nested() {
 
 #[test]
 fn test_model_manager_find_by_path_value_no_matches() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut user1 = DefaultValueFactory::create_object();
     user1
@@ -1317,7 +1317,7 @@ fn test_model_manager_find_by_path_value_no_matches() {
 
 #[test]
 fn test_model_manager_path_methods_with_different_data_types() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut record = DefaultValueFactory::create_object();
     record
@@ -1415,7 +1415,7 @@ fn test_model_manager_path_methods_with_different_data_types() {
 
 #[test]
 fn test_model_manager_path_methods_performance() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     for i in 0..100 {
         let mut user = DefaultValueFactory::create_object();
@@ -1476,7 +1476,7 @@ fn test_model_manager_path_methods_performance() {
 
 #[test]
 fn test_model_manager_path_methods_empty_model() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let exists_results = manager
         .find_by_path_exists("empty_model", "any_field")
@@ -1498,7 +1498,7 @@ fn test_model_manager_path_methods_empty_model() {
 
 #[test]
 fn test_model_manager_path_methods_complex_scenario() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut employee1 = DefaultValueFactory::create_object();
     employee1

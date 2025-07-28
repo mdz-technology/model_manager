@@ -11,7 +11,7 @@ pub struct SerdeArrayIterator {
 }
 
 impl SerdeArrayIterator {
-    pub fn new(array: Vec<Value>) -> Self {
+    pub (crate) fn new(array: Vec<Value>) -> Self {
         let total_size = array.len();
 
         Self {

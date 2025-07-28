@@ -1,5 +1,5 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
+use dynamic_value::{
+    CoreValue, DefaultModelManagerFactory, DefaultValueFactory, ModelManager, ModelManagerFactory,
     PathNavigation, ValueAnalysis, ValueFactory,
 };
 use std::time::Instant;
@@ -526,7 +526,7 @@ fn test_deep_clone_performance_threshold() {
 
 #[test]
 fn test_deep_clone_with_model_manager() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let unique_id = format!(
         "tech_corp_{}",

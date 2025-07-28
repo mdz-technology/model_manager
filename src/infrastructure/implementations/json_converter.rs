@@ -9,13 +9,13 @@ pub struct SerdeJsonConverter {
 }
 
 impl SerdeJsonConverter {
-    pub fn new() -> Self {
+    pub (crate) fn new() -> Self {
         Self {
             config: JsonConverterConfig::default(),
         }
     }
 
-    pub fn new_with_config(config: JsonConverterConfig) -> Self {
+    pub (crate) fn new_with_config(config: JsonConverterConfig) -> Self {
         Self { config }
     }
 

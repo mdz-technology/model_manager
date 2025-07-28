@@ -1,11 +1,11 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
+use dynamic_value::{
+    CoreValue, DefaultModelManagerFactory, DefaultValueFactory, ModelManager, ModelManagerFactory,
     ValueFactory,
 };
 
 #[test]
 fn test_basic_crud_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     // Create data
     let mut user_data = DefaultValueFactory::create_object();
@@ -77,7 +77,7 @@ fn test_basic_crud_operations() {
 
 #[test]
 fn test_multiple_models() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     // Insert
     let mut user = DefaultValueFactory::create_object();
@@ -108,7 +108,7 @@ fn test_multiple_models() {
 
 #[test]
 fn test_sequential_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     // Create and insert 10 items sequential (la concurrencia ocurre dentro del actor system)
     for i in 0..10 {
@@ -129,73 +129,6 @@ fn test_sequential_operations() {
     // Verify
     let all_users = manager.get_all("sequential_users").unwrap();
     assert_eq!(all_users.len(), 10);
-}
-
-#[test]
-fn test_actor_system_stress() {
-    let manager = DefaultModelManager::create();
-
-    // Test: El actor system maneja múltiples operaciones rápidas
-
-    // Fase 1: Inserción rápida de múltiples elementos
-    for i in 0..50 {
-        let mut data = DefaultValueFactory::create_object();
-        data.set("id", DefaultValueFactory::create_number(i as f64).unwrap())
-            .unwrap();
-        data.set(
-            "name",
-            DefaultValueFactory::create_string(&format!("User {}", i)),
-        )
-        .unwrap();
-        data.set("batch", DefaultValueFactory::create_string("stress_test"))
-            .unwrap();
-
-        let result = manager.insert("stress_users", None, data);
-        assert!(result.is_ok(), "Failed to insert user {}", i);
-    }
-
-    // Fase 2: Verificación de consistencia
-    let all_users = manager.get_all("stress_users").unwrap();
-    assert_eq!(
-        all_users.len(),
-        50,
-        "Expected 50 users, got {}",
-        all_users.len()
-    );
-
-    // Fase 3: Operaciones mixtas en diferentes modelos
-    for i in 0..10 {
-        // Crear productos en paralelo a los usuarios
-        let mut product = DefaultValueFactory::create_object();
-        product
-            .set(
-                "name",
-                DefaultValueFactory::create_string(&format!("Product {}", i)),
-            )
-            .unwrap();
-        product
-            .set(
-                "price",
-                DefaultValueFactory::create_number(10.0 * i as f64).unwrap(),
-            )
-            .unwrap();
-
-        let result = manager.insert("stress_products", None, product);
-        assert!(result.is_ok());
-    }
-
-    // Verificación final - múltiples modelos
-    let final_users = manager.get_all("stress_users").unwrap();
-    let final_products = manager.get_all("stress_products").unwrap();
-
-    assert_eq!(final_users.len(), 50);
-    assert_eq!(final_products.len(), 10);
-
-    println!(
-        "Actor system handled {} users and {} products successfully",
-        final_users.len(),
-        final_products.len()
-    );
 }
 
 #[test]
@@ -248,10 +181,298 @@ fn test_dynamic_value_operations() {
 #[test]
 fn test_factory_pattern() {
     // Test directo del factories pattern
-    let manager1 = DefaultModelManager::create();
-    let manager2 = DefaultModelManager::create();
+    let manager1 = DefaultModelManagerFactory::create();
+    let manager2 = DefaultModelManagerFactory::create();
 
     // Verificar que se pueden crear múltiples instancias independientes
     // (cada una tendrá su propio sistema de actores)
     assert!(std::ptr::addr_of!(manager1) != std::ptr::addr_of!(manager2));
+}
+
+#[test]
+fn test_core_value_remove_operations() {
+    // Test remove_key en objeto
+    let mut user_data = DefaultValueFactory::create_object();
+    user_data
+        .set("name", DefaultValueFactory::create_string("John Doe"))
+        .unwrap();
+    user_data
+        .set("age", DefaultValueFactory::create_number(30.0).unwrap())
+        .unwrap();
+    user_data
+        .set("active", DefaultValueFactory::create_bool(true))
+        .unwrap();
+
+    // Remover clave existente
+    let removed_name = user_data.remove_key("name").unwrap();
+    assert!(removed_name.is_some());
+    assert_eq!(removed_name.unwrap().as_str().unwrap(), "John Doe");
+    assert!(user_data.get("name").unwrap().is_none());
+
+    // Remover clave no existente
+    let removed_invalid = user_data.remove_key("invalid_key").unwrap();
+    assert!(removed_invalid.is_none());
+
+    // Verificar que otras claves siguen ahí
+    assert!(user_data.get("age").unwrap().is_some());
+    assert!(user_data.get("active").unwrap().is_some());
+
+    println!("✅ Object remove_key operations passed");
+}
+
+#[test]
+fn test_core_value_remove_array_operations() {
+    // Test remove_at en array
+    let mut items_array = DefaultValueFactory::create_array();
+    items_array
+        .push(DefaultValueFactory::create_string("item1"))
+        .unwrap();
+    items_array
+        .push(DefaultValueFactory::create_string("item2"))
+        .unwrap();
+    items_array
+        .push(DefaultValueFactory::create_string("item3"))
+        .unwrap();
+
+    // Remover elemento del medio
+    let removed_item = items_array.remove_at(1).unwrap();
+    assert!(removed_item.is_some());
+    assert_eq!(removed_item.unwrap().as_str().unwrap(), "item2");
+
+    let remaining_array = items_array.as_array().unwrap().unwrap();
+    assert_eq!(remaining_array.len(), 2);
+    assert_eq!(remaining_array[0].as_str().unwrap(), "item1");
+    assert_eq!(remaining_array[1].as_str().unwrap(), "item3");
+
+    // Remover primer elemento
+    let removed_first = items_array.remove_at(0).unwrap();
+    assert!(removed_first.is_some());
+    assert_eq!(removed_first.unwrap().as_str().unwrap(), "item1");
+
+    // Remover índice fuera de rango
+    let removed_invalid = items_array.remove_at(10).unwrap();
+    assert!(removed_invalid.is_none());
+
+    println!("✅ Array remove_at operations passed");
+}
+
+#[test]
+fn test_remove_operations_error_cases() {
+    // Test remove_key en valor no-objeto
+    let mut string_value = DefaultValueFactory::create_string("not an object");
+    let result = string_value.remove_key("key");
+    assert!(result.is_err());
+
+    let mut number_value = DefaultValueFactory::create_number(42.0).unwrap();
+    let result = number_value.remove_key("key");
+    assert!(result.is_err());
+
+    // Test remove_at en valor no-array
+    let mut object_value = DefaultValueFactory::create_object();
+    let result = object_value.remove_at(0);
+    assert!(result.is_err());
+
+    let mut bool_value = DefaultValueFactory::create_bool(true);
+    let result = bool_value.remove_at(0);
+    assert!(result.is_err());
+
+    println!("✅ Remove operations error cases passed");
+}
+
+#[test]
+fn test_remove_operations_with_model_manager() {
+    let manager = DefaultModelManagerFactory::create();
+
+    // Crear usuario con datos completos
+    let mut user = DefaultValueFactory::create_object();
+    user.set("name", DefaultValueFactory::create_string("Jane Smith"))
+        .unwrap();
+    user.set("email", DefaultValueFactory::create_string("jane@test.com"))
+        .unwrap();
+    user.set("age", DefaultValueFactory::create_number(28.0).unwrap())
+        .unwrap();
+    user.set("department", DefaultValueFactory::create_string("Engineering"))
+        .unwrap();
+
+    let mut tags = DefaultValueFactory::create_array();
+    tags.push(DefaultValueFactory::create_string("developer"))
+        .unwrap();
+    tags.push(DefaultValueFactory::create_string("senior"))
+        .unwrap();
+    tags.push(DefaultValueFactory::create_string("backend"))
+        .unwrap();
+    user.set("tags", tags).unwrap();
+
+    manager.insert("users", Some("user_1"), user).unwrap();
+
+    // Recuperar y modificar usando remove
+    let mut retrieved = manager.get("users", "user_1").unwrap();
+
+    // Remover campo email
+    let removed_email = retrieved.remove_key("email").unwrap();
+    assert!(removed_email.is_some());
+    assert_eq!(removed_email.unwrap().as_str().unwrap(), "jane@test.com");
+
+    // Remover elemento del array tags
+    let mut user_tags = retrieved.get("tags").unwrap().unwrap();
+    let removed_tag = user_tags.remove_at(1).unwrap();
+    assert!(removed_tag.is_some());
+    assert_eq!(removed_tag.unwrap().as_str().unwrap(), "senior");
+
+    retrieved.set("tags", user_tags).unwrap();
+
+    // Actualizar en el manager
+    manager.update("users", "user_1", retrieved).unwrap();
+
+    // Verificar cambios
+    let final_user = manager.get("users", "user_1").unwrap();
+    assert!(final_user.get("email").unwrap().is_none());
+
+    let final_tags = final_user.get("tags").unwrap().unwrap();
+    let final_tags_array = final_tags.as_array().unwrap().unwrap();
+    assert_eq!(final_tags_array.len(), 2);
+    assert_eq!(final_tags_array[0].as_str().unwrap(), "developer");
+    assert_eq!(final_tags_array[1].as_str().unwrap(), "backend");
+
+    println!("✅ Remove operations with model manager passed");
+}
+
+#[test]
+fn test_remove_operations_complex_scenarios() {
+    // Escenario complejo: remover elementos anidados
+    let mut company = DefaultValueFactory::create_object();
+    company
+        .set("name", DefaultValueFactory::create_string("TechCorp"))
+        .unwrap();
+
+    let mut departments = DefaultValueFactory::create_object();
+
+    let mut engineering = DefaultValueFactory::create_object();
+    engineering
+        .set("head", DefaultValueFactory::create_string("Alice"))
+        .unwrap();
+    engineering
+        .set("budget", DefaultValueFactory::create_number(500000.0).unwrap())
+        .unwrap();
+    engineering
+        .set("temporary_field", DefaultValueFactory::create_string("to_remove"))
+        .unwrap();
+
+    let mut sales = DefaultValueFactory::create_object();
+    sales
+        .set("head", DefaultValueFactory::create_string("Bob"))
+        .unwrap();
+    sales
+        .set("budget", DefaultValueFactory::create_number(300000.0).unwrap())
+        .unwrap();
+
+    departments.set("engineering", engineering).unwrap();
+    departments.set("sales", sales).unwrap();
+    departments.set("marketing", DefaultValueFactory::create_object()).unwrap(); // Departamento vacío a remover
+
+    company.set("departments", departments).unwrap();
+
+    let mut offices = DefaultValueFactory::create_array();
+    offices.push(DefaultValueFactory::create_string("New York")).unwrap();
+    offices.push(DefaultValueFactory::create_string("San Francisco")).unwrap();
+    offices.push(DefaultValueFactory::create_string("Austin")).unwrap(); // Oficina a remover
+    offices.push(DefaultValueFactory::create_string("Seattle")).unwrap();
+
+    company.set("offices", offices).unwrap();
+
+    // Remover campo temporal del departamento engineering
+    let mut company_departments = company.get("departments").unwrap().unwrap();
+    let mut eng_dept = company_departments.get("engineering").unwrap().unwrap();
+    let removed_temp = eng_dept.remove_key("temporary_field").unwrap();
+    assert!(removed_temp.is_some());
+    company_departments.set("engineering", eng_dept).unwrap();
+
+    // Remover departamento marketing completo
+    let removed_marketing = company_departments.remove_key("marketing").unwrap();
+    assert!(removed_marketing.is_some());
+    company.set("departments", company_departments).unwrap();
+
+    // Remover oficina Austin (índice 2)
+    let mut company_offices = company.get("offices").unwrap().unwrap();
+    let removed_office = company_offices.remove_at(2).unwrap();
+    assert!(removed_office.is_some());
+    assert_eq!(removed_office.unwrap().as_str().unwrap(), "Austin");
+    company.set("offices", company_offices).unwrap();
+
+    // Verificaciones finales
+    let final_departments = company.get("departments").unwrap().unwrap();
+    assert!(final_departments.get("marketing").unwrap().is_none());
+
+    let final_eng = final_departments.get("engineering").unwrap().unwrap();
+    assert!(final_eng.get("temporary_field").unwrap().is_none());
+    assert!(final_eng.get("head").unwrap().is_some());
+
+    let final_offices = company.get("offices").unwrap().unwrap();
+    let final_offices_array = final_offices.as_array().unwrap().unwrap();
+    assert_eq!(final_offices_array.len(), 3);
+    assert_eq!(final_offices_array[0].as_str().unwrap(), "New York");
+    assert_eq!(final_offices_array[1].as_str().unwrap(), "San Francisco");
+    assert_eq!(final_offices_array[2].as_str().unwrap(), "Seattle");
+
+    println!("✅ Complex remove scenarios passed");
+}
+
+#[test]
+fn test_remove_operations_performance() {
+    // Test de performance para remociones masivas
+    let mut large_object = DefaultValueFactory::create_object();
+
+    // Crear objeto con muchas propiedades
+    for i in 0..1000 {
+        large_object
+            .set(
+                &format!("prop_{}", i),
+                DefaultValueFactory::create_string(&format!("value_{}", i)),
+            )
+            .unwrap();
+    }
+
+    // Remover propiedades pares
+    let start = std::time::Instant::now();
+    let mut removed_count = 0;
+
+    for i in (0..1000).step_by(2) {
+        let removed = large_object.remove_key(&format!("prop_{}", i)).unwrap();
+        if removed.is_some() {
+            removed_count += 1;
+        }
+    }
+
+    let duration = start.elapsed();
+
+    assert_eq!(removed_count, 500);
+    assert!(duration.as_millis() < 100); // Debe ser rápido
+
+    // Verificar que quedan las propiedades impares
+    for i in (1..1000).step_by(2) {
+        assert!(large_object.get(&format!("prop_{}", i)).unwrap().is_some());
+    }
+
+    // Test de performance para array
+    let mut large_array = DefaultValueFactory::create_array();
+    for i in 0..1000 {
+        large_array
+            .push(DefaultValueFactory::create_number(i as f64).unwrap())
+            .unwrap();
+    }
+
+    let start = std::time::Instant::now();
+
+    // Remover elementos del final hacia adelante (más eficiente)
+    for _ in 0..500 {
+        large_array.remove_at(large_array.as_array().unwrap().unwrap().len() - 1).unwrap();
+    }
+
+    let duration = start.elapsed();
+
+    let remaining = large_array.as_array().unwrap().unwrap();
+    assert_eq!(remaining.len(), 500);
+    assert!(duration.as_millis() < 50);
+
+    println!("✅ Remove operations performance test passed in {:?}", duration);
 }

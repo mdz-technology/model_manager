@@ -1,5 +1,5 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
+use dynamic_value::{
+    CoreValue, DefaultModelManagerFactory, DefaultValueFactory, ModelManager, ModelManagerFactory,
     PathNavigation, ValueFactory,
 };
 
@@ -98,7 +98,7 @@ fn test_optimized_deep_path_setting() {
 
 #[test]
 fn test_model_manager_batch_path_operations() {
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     let mut company_config = DefaultValueFactory::create_object();
     company_config

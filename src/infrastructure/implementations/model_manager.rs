@@ -8,7 +8,7 @@ pub struct SimpleModelManager<T: DynamicValue> {
 }
 
 impl<T: DynamicValue> SimpleModelManager<T> {
-    pub fn new() -> Self {
+    pub (crate) fn new() -> Self {
         Self {
             models: Arc::new(RwLock::new(HashMap::new())),
         }

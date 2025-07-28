@@ -1,10 +1,10 @@
-use model_manager::{ModelManager, ModelManagerFactory, DefaultModelManager, DefaultValueFactory, ValueFactory, CoreValue};
+use dynamic_value::{ModelManager, ModelManagerFactory, DefaultModelManagerFactory, DefaultValueFactory, ValueFactory, CoreValue};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Model Manager - Ejemplo Básico de Uso");
     println!("=========================================\n");
 
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
     println!("✅ Manager creado exitosamente\n");
 
     println!("=== EJEMPLO 1: OPERACIONES CRUD BÁSICAS ===");

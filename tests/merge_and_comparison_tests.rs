@@ -1,7 +1,4 @@
-use model_manager::{
-    CoreValue, DefaultModelManager, DefaultValueFactory, ModelManager, ModelManagerFactory,
-    PathNavigation, ValueAnalysis, ValueFactory,
-};
+use dynamic_value::{CoreValue, DefaultModelManagerFactory, DefaultValueFactory, ModelManager, ModelManagerFactory, PathNavigation, ValueAnalysis, ValueFactory};
 use std::time::Instant;
 
 #[test]
@@ -651,7 +648,7 @@ fn test_context_merge_scenario() {
 #[test]
 fn test_model_manager_with_merge_and_comparison() {
     // Given: Model manager con datos para merge y comparación
-    let manager = DefaultModelManager::create();
+    let manager = DefaultModelManagerFactory::create();
 
     // Template base
     let mut base_template = DefaultValueFactory::create_object();
